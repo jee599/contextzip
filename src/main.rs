@@ -1,6 +1,7 @@
 mod ansi_filter;
 mod aws_cmd;
 mod binlog;
+mod build_cmd;
 mod cargo_cmd;
 mod cc_economics;
 mod ccusage;
