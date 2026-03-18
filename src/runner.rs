@@ -46,7 +46,9 @@ pub fn run_err(command: &str, verbose: u8) -> Result<()> {
             }
         }
     } else {
-        rtk.push_str(&filtered);
+        // Post-process: compress stacktraces in error output
+        let compressed = crate::error_cmd::compress_errors(&filtered);
+        rtk.push_str(&compressed);
     }
 
     let exit_code = output
