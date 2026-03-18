@@ -15,6 +15,7 @@ mod dotnet_cmd;
 mod dotnet_format_report;
 mod dotnet_trx;
 mod env_cmd;
+mod error_cmd;
 mod filter;
 mod find_cmd;
 mod format_cmd;
@@ -63,6 +64,7 @@ mod utils;
 mod verify_cmd;
 mod vitest_cmd;
 mod wc_cmd;
+mod web_cmd;
 mod wget_cmd;
 
 use anyhow::{Context, Result};
@@ -522,6 +524,12 @@ enum Commands {
         /// Curl arguments (URL + options)
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
+    },
+
+    /// Extract main content from web page HTML (strip nav, ads, scripts)
+    Web {
+        /// URL to fetch and extract content from
+        url: String,
     },
 
     /// Discover missed TokenZip savings from Claude Code history
@@ -1830,6 +1838,31 @@ fn main() -> Result<()> {
             curl_cmd::run(&args, cli.verbose)?;
         }
 
+        Commands::Web { url } => {
+            let timer = tracking::TimedExecution::start();
+            let mut cmd = utils::resolved_command("curl");
+            cmd.args(["-s", "-L", &url]);
+            let output = cmd.output().context("Failed to fetch URL with curl")?;
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                eprintln!("FAILED: curl {}", stderr.trim());
+                std::process::exit(output.status.code().unwrap_or(1));
+            }
+            let raw = String::from_utf8_lossy(&output.stdout).to_string();
+            let filtered = if web_cmd::is_html(&raw) {
+                web_cmd::extract_content(&raw)
+            } else {
+                raw.clone()
+            };
+            println!("{}", filtered);
+            timer.track(
+                &format!("web {}", url),
+                &format!("tokenzip web {}", url),
+                &raw,
+                &filtered,
+            );
+        }
+
         Commands::Discover {
             project,
             limit,
@@ -2202,6 +2235,7 @@ fn is_operational_command(cmd: &Commands) -> bool {
             | Commands::Npm { .. }
             | Commands::Npx { .. }
             | Commands::Curl { .. }
+            | Commands::Web { .. }
             | Commands::Ruff { .. }
             | Commands::Pytest { .. }
             | Commands::Pip { .. }
