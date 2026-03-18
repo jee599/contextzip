@@ -134,6 +134,21 @@ pub struct GainSummary {
     pub by_day: Vec<(String, usize)>,
 }
 
+/// Per-feature aggregate statistics.
+///
+/// Groups savings by the tokenzip module that produced them (cli, error, web, etc.).
+#[derive(Debug, Serialize)]
+pub struct FeatureStats {
+    /// Feature module name (e.g., "cli", "error", "web")
+    pub feature: String,
+    /// Number of commands using this feature
+    pub commands: usize,
+    /// Total tokens saved by this feature
+    pub saved_tokens: usize,
+    /// Average savings percentage for this feature
+    pub avg_savings_pct: f64,
+}
+
 /// Daily statistics for token savings and execution metrics.
 ///
 /// Serializable to JSON for export via `tokenzip gain --daily --format json`.
@@ -289,6 +304,25 @@ impl Tracker {
             "ALTER TABLE commands ADD COLUMN project_path TEXT DEFAULT ''",
             [],
         );
+        // Migration: add feature column for tracking which tokenzip module produced savings
+        let _ = conn.execute(
+            "ALTER TABLE commands ADD COLUMN feature TEXT DEFAULT 'cli'",
+            [],
+        );
+        // Normalize NULLs in feature column from pre-migration rows
+        let has_null_features: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM commands WHERE feature IS NULL)",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+        if has_null_features {
+            let _ = conn.execute(
+                "UPDATE commands SET feature = 'cli' WHERE feature IS NULL",
+                [],
+            );
+        }
         // One-time migration: normalize NULLs from pre-default schema // changed: guarded with EXISTS
         let has_nulls: bool = conn
             .query_row(
@@ -357,6 +391,29 @@ impl Tracker {
         output_tokens: usize,
         exec_time_ms: u64,
     ) -> Result<()> {
+        self.record_with_feature(
+            original_cmd,
+            rtk_cmd,
+            input_tokens,
+            output_tokens,
+            exec_time_ms,
+            "cli",
+        )
+    }
+
+    /// Record a command execution with a specific feature tag.
+    ///
+    /// Feature identifies which tokenzip module produced the savings:
+    /// 'cli', 'error', 'web', 'ansi', 'build', 'pkg', 'docker'.
+    pub fn record_with_feature(
+        &self,
+        original_cmd: &str,
+        rtk_cmd: &str,
+        input_tokens: usize,
+        output_tokens: usize,
+        exec_time_ms: u64,
+        feature: &str,
+    ) -> Result<()> {
         let saved = input_tokens.saturating_sub(output_tokens);
         let pct = if input_tokens > 0 {
             (saved as f64 / input_tokens as f64) * 100.0
@@ -364,21 +421,22 @@ impl Tracker {
             0.0
         };
 
-        let project_path = current_project_path_string(); // added: record cwd
+        let project_path = current_project_path_string();
 
         self.conn.execute(
-            "INSERT INTO commands (timestamp, original_cmd, rtk_cmd, project_path, input_tokens, output_tokens, saved_tokens, savings_pct, exec_time_ms)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", // added: project_path
+            "INSERT INTO commands (timestamp, original_cmd, rtk_cmd, project_path, input_tokens, output_tokens, saved_tokens, savings_pct, exec_time_ms, feature)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 Utc::now().to_rfc3339(),
                 original_cmd,
                 rtk_cmd,
-                project_path, // added
+                project_path,
                 input_tokens as i64,
                 output_tokens as i64,
                 saved as i64,
                 pct,
-                exec_time_ms as i64
+                exec_time_ms as i64,
+                feature
             ],
         )?;
 
@@ -617,6 +675,32 @@ impl Tracker {
         let mut result: Vec<_> = rows.collect::<Result<Vec<_>, _>>()?;
         result.reverse();
         Ok(result)
+    }
+
+    /// Get savings breakdown by feature module.
+    ///
+    /// Returns aggregate stats grouped by the `feature` column, ordered by
+    /// total tokens saved descending.
+    pub fn get_by_feature(&self, project_path: Option<&str>) -> Result<Vec<FeatureStats>> {
+        let (project_exact, project_glob) = project_filter_params(project_path);
+        let mut stmt = self.conn.prepare(
+            "SELECT feature, COUNT(*), SUM(saved_tokens), AVG(savings_pct)
+             FROM commands
+             WHERE (?1 IS NULL OR project_path = ?1 OR project_path GLOB ?2)
+             GROUP BY feature
+             ORDER BY SUM(saved_tokens) DESC",
+        )?;
+
+        let rows = stmt.query_map(params![project_exact, project_glob], |row| {
+            Ok(FeatureStats {
+                feature: row.get(0)?,
+                commands: row.get::<_, i64>(1)? as usize,
+                saved_tokens: row.get::<_, i64>(2)? as usize,
+                avg_savings_pct: row.get(3)?,
+            })
+        })?;
+
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
 
     /// Get daily statistics for all recorded days.
@@ -1096,17 +1180,30 @@ impl TimedExecution {
     /// timer.track("ls -la", "tokenzip ls", input, output);
     /// ```
     pub fn track(&self, original_cmd: &str, rtk_cmd: &str, input: &str, output: &str) {
+        self.track_with_feature(original_cmd, rtk_cmd, input, output, "cli");
+    }
+
+    /// Track a command execution tagged with a specific feature module.
+    pub fn track_with_feature(
+        &self,
+        original_cmd: &str,
+        rtk_cmd: &str,
+        input: &str,
+        output: &str,
+        feature: &str,
+    ) {
         let elapsed_ms = self.start.elapsed().as_millis() as u64;
         let input_tokens = estimate_tokens(input);
         let output_tokens = estimate_tokens(output);
 
         if let Ok(tracker) = Tracker::new() {
-            let _ = tracker.record(
+            let _ = tracker.record_with_feature(
                 original_cmd,
                 rtk_cmd,
                 input_tokens,
                 output_tokens,
                 elapsed_ms,
+                feature,
             );
         }
     }
@@ -1425,5 +1522,95 @@ mod tests {
         // We can't assert exact rate because other tests may have added records,
         // but we can verify recovery_rate is between 0 and 100
         assert!(summary.recovery_rate >= 0.0 && summary.recovery_rate <= 100.0);
+    }
+
+    // 14. record_with_feature stores feature column correctly
+    #[test]
+    fn test_record_with_feature() {
+        let tracker = Tracker::new().expect("Failed to create tracker");
+        let pid = std::process::id();
+        let cmd = format!("tokenzip_feat_test_{}", pid);
+
+        tracker
+            .record_with_feature("test cmd", &cmd, 500, 50, 10, "error")
+            .expect("Failed to record with feature");
+
+        // Verify via get_by_feature
+        let features = tracker
+            .get_by_feature(None)
+            .expect("Failed to get by feature");
+        let error_feat = features.iter().find(|f| f.feature == "error");
+        assert!(error_feat.is_some(), "Expected 'error' feature in results");
+        assert!(error_feat.unwrap().commands >= 1);
+    }
+
+    // 15. record() defaults to 'cli' feature
+    #[test]
+    fn test_record_defaults_to_cli_feature() {
+        let tracker = Tracker::new().expect("Failed to create tracker");
+        let pid = std::process::id();
+        let cmd = format!("tokenzip_cli_default_test_{}", pid);
+
+        tracker
+            .record("test cmd", &cmd, 200, 40, 10)
+            .expect("Failed to record");
+
+        let features = tracker
+            .get_by_feature(None)
+            .expect("Failed to get by feature");
+        let cli_feat = features.iter().find(|f| f.feature == "cli");
+        assert!(cli_feat.is_some(), "Expected 'cli' feature in results");
+    }
+
+    // 16. get_by_feature returns multiple feature groups
+    #[test]
+    fn test_get_by_feature_multiple() {
+        let tracker = Tracker::new().expect("Failed to create tracker");
+        let pid = std::process::id();
+
+        tracker
+            .record_with_feature(
+                "cmd1",
+                &format!("feat_multi_{}_a", pid),
+                1000,
+                100,
+                5,
+                "web",
+            )
+            .expect("Failed to record web");
+        tracker
+            .record_with_feature(
+                "cmd2",
+                &format!("feat_multi_{}_b", pid),
+                500,
+                50,
+                5,
+                "build",
+            )
+            .expect("Failed to record build");
+
+        let features = tracker
+            .get_by_feature(None)
+            .expect("Failed to get by feature");
+        let feature_names: Vec<&str> = features.iter().map(|f| f.feature.as_str()).collect();
+        assert!(feature_names.contains(&"web"), "Missing 'web' feature");
+        assert!(feature_names.contains(&"build"), "Missing 'build' feature");
+    }
+
+    // 17. TimedExecution::track_with_feature stores feature
+    #[test]
+    fn test_timed_execution_track_with_feature() {
+        let timer = TimedExecution::start();
+        timer.track_with_feature("cmd", "tokenzip cmd", "long input data", "short", "docker");
+
+        let tracker = Tracker::new().expect("Failed to create tracker");
+        let features = tracker
+            .get_by_feature(None)
+            .expect("Failed to get by feature");
+        let docker_feat = features.iter().find(|f| f.feature == "docker");
+        assert!(
+            docker_feat.is_some(),
+            "Expected 'docker' feature from timed execution"
+        );
     }
 }

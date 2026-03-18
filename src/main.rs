@@ -378,9 +378,12 @@ enum Commands {
 
     /// Show token savings summary and history
     Gain {
-        /// Filter statistics to current project (current working directory) // added
+        /// Filter statistics to current project (current working directory)
         #[arg(short, long)]
         project: bool,
+        /// Show savings breakdown by feature module (cli, error, web, etc.)
+        #[arg(short = 'B', long)]
+        by_feature: bool,
         /// Show ASCII graph of daily savings
         #[arg(short, long)]
         graph: bool,
@@ -1117,7 +1120,10 @@ fn run_fallback(parse_error: clap::Error) -> Result<()> {
 
         match status {
             Ok(s) => {
-                timer.track_passthrough(&raw_command, &format!("tokenzip fallback: {}", raw_command));
+                timer.track_passthrough(
+                    &raw_command,
+                    &format!("tokenzip fallback: {}", raw_command),
+                );
 
                 tracking::record_parse_failure_silent(&raw_command, &error_message, true);
 
@@ -1655,7 +1661,8 @@ fn main() -> Result<()> {
         }
 
         Commands::Gain {
-            project, // added
+            project,
+            by_feature,
             graph,
             history,
             quota,
@@ -1668,7 +1675,8 @@ fn main() -> Result<()> {
             failures,
         } => {
             gain::run(
-                project, // added: pass project flag
+                project,
+                by_feature,
                 graph,
                 history,
                 quota,
@@ -2260,9 +2268,14 @@ mod tests {
 
     #[test]
     fn test_git_global_options_parsing() {
-        let cli =
-            Cli::try_parse_from(["tokenzip", "git", "--no-pager", "--no-optional-locks", "status"])
-                .unwrap();
+        let cli = Cli::try_parse_from([
+            "tokenzip",
+            "git",
+            "--no-pager",
+            "--no-optional-locks",
+            "status",
+        ])
+        .unwrap();
         match cli.command {
             Commands::Git {
                 no_pager,
@@ -2384,6 +2397,30 @@ mod tests {
         if let Ok(cli) = result {
             match cli.command {
                 Commands::Gain { failures, .. } => assert!(failures),
+                _ => panic!("Expected Gain command"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_gain_by_feature_flag_parses() {
+        let result = Cli::try_parse_from(["tokenzip", "gain", "--by-feature"]);
+        assert!(result.is_ok());
+        if let Ok(cli) = result {
+            match cli.command {
+                Commands::Gain { by_feature, .. } => assert!(by_feature),
+                _ => panic!("Expected Gain command"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_gain_by_feature_short_flag_parses() {
+        let result = Cli::try_parse_from(["tokenzip", "gain", "-B"]);
+        assert!(result.is_ok());
+        if let Ok(cli) = result {
+            match cli.command {
+                Commands::Gain { by_feature, .. } => assert!(by_feature),
                 _ => panic!("Expected Gain command"),
             }
         }

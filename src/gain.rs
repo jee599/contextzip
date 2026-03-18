@@ -10,7 +10,8 @@ use std::path::PathBuf;
 
 #[allow(clippy::too_many_arguments)]
 pub fn run(
-    project: bool, // added: per-project scope flag
+    project: bool,
+    by_feature: bool,
     graph: bool,
     history: bool,
     quota: bool,
@@ -213,6 +214,33 @@ pub fn run(
             }
             println!("{}", "─".repeat(table_width));
             println!();
+        }
+
+        if by_feature {
+            let features = tracker
+                .get_by_feature(project_scope.as_deref())
+                .context("Failed to load feature breakdown")?;
+            if !features.is_empty() {
+                println!("{}", styled("By Feature", true));
+                println!("{}", "─".repeat(60));
+                println!(
+                    "{:<14} {:>8}  {:>9}  {:>5}",
+                    "Feature", "Commands", "Saved", "Avg%"
+                );
+                println!("{}", "─".repeat(60));
+                for f in &features {
+                    let label = feature_label(&f.feature);
+                    println!(
+                        "{:<14} {:>8}  {:>9}  {:>4.0}%",
+                        label,
+                        f.commands,
+                        format_tokens(f.saved_tokens),
+                        f.avg_savings_pct
+                    );
+                }
+                println!("{}", "─".repeat(60));
+                println!();
+            }
         }
 
         if graph && !summary.by_day.is_empty() {
@@ -424,6 +452,20 @@ fn shorten_path(path: &str) -> String {
             comps[comps.len() - 2],
             comps[comps.len() - 1]
         )
+    }
+}
+
+/// Human-readable label for feature column values.
+fn feature_label(feature: &str) -> &str {
+    match feature {
+        "cli" => "cli (RTK)",
+        "error" => "error",
+        "web" => "web",
+        "ansi" => "ansi",
+        "build" => "build",
+        "pkg" => "pkg",
+        "docker" => "docker",
+        other => other,
     }
 }
 
