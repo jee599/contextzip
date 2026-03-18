@@ -48,6 +48,10 @@ pub fn run_err(command: &str, verbose: u8) -> Result<()> {
     } else {
         // Post-process: compress stacktraces in error output
         let compressed = crate::error_cmd::compress_errors(&filtered);
+        // Post-process: group repeated build errors (tsc, eslint, cargo, mypy, pylint)
+        let compressed = crate::build_cmd::group_build_errors(&compressed);
+        // Post-process: compress Docker build logs
+        let compressed = crate::docker_cmd::compress_docker_log(&compressed);
         rtk.push_str(&compressed);
     }
 

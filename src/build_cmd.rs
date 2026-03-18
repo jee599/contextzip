@@ -36,7 +36,6 @@ lazy_static! {
     ).unwrap();
 }
 
-#[allow(dead_code)]
 struct ErrorGroup {
     code: String,
     message: String,
@@ -67,7 +66,6 @@ impl ErrorGroup {
 ///
 /// Supports: TypeScript (tsc), ESLint, Rust (cargo), Python mypy, Python pylint.
 /// If no recognizable error patterns are found, returns input unchanged.
-#[allow(dead_code)]
 pub fn group_build_errors(input: &str) -> String {
     let mut groups: HashMap<String, ErrorGroup> = HashMap::new();
     let mut detected = false;

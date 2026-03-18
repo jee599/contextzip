@@ -34,7 +34,6 @@ lazy_static! {
 /// On failure: preserves the failed step, 2 prior steps for context,
 /// the full error message, and exit code.
 /// Non-docker output passes through unchanged.
-#[allow(dead_code)]
 pub fn compress_docker_log(input: &str) -> String {
     if input.trim().is_empty() {
         return input.to_string();
@@ -69,7 +68,7 @@ pub fn compress_docker_log(input: &str) -> String {
                 total,
                 instruction,
                 cached: false,
-                failed: false,
+                _failed: false,
                 error_lines: Vec::new(),
             });
         } else if let Some(ref mut step) = current_step {
@@ -116,13 +115,12 @@ pub fn compress_docker_log(input: &str) -> String {
     }
 }
 
-#[allow(dead_code)]
 struct StepInfo {
     step_num: usize,
     total: usize,
     instruction: String,
     cached: bool,
-    failed: bool,
+    _failed: bool,
     error_lines: Vec<String>,
 }
 
