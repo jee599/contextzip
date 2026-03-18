@@ -1509,7 +1509,10 @@ error: aborting due to 2 previous errors
 
     #[test]
     fn test_format_crate_info() {
-        assert_eq!(format_crate_info("tokenzip", "v0.11.0", ""), "tokenzip v0.11.0");
+        assert_eq!(
+            format_crate_info("tokenzip", "v0.11.0", ""),
+            "tokenzip v0.11.0"
+        );
         assert_eq!(format_crate_info("tokenzip", "", ""), "tokenzip");
         assert_eq!(format_crate_info("", "", "package"), "package");
         assert_eq!(format_crate_info("", "v0.1.0", "fallback"), "fallback");

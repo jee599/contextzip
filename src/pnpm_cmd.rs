@@ -394,7 +394,12 @@ fn run_outdated(args: &[String], verbose: u8) -> Result<()> {
         println!("{}", filtered);
     }
 
-    timer.track("pnpm outdated", "tokenzip pnpm outdated", &combined, &filtered);
+    timer.track(
+        "pnpm outdated",
+        "tokenzip pnpm outdated",
+        &combined,
+        &filtered,
+    );
 
     Ok(())
 }

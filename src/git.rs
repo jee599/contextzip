@@ -923,7 +923,12 @@ fn run_commit(args: &[String], verbose: u8, global_args: &[String]) -> Result<()
             if !stdout.trim().is_empty() {
                 eprint!("{}", stdout);
             }
-            timer.track(&original_cmd, "tokenzip git commit", &raw_output, &raw_output);
+            timer.track(
+                &original_cmd,
+                "tokenzip git commit",
+                &raw_output,
+                &raw_output,
+            );
             std::process::exit(output.status.code().unwrap_or(1));
         }
     }
@@ -1583,7 +1588,12 @@ fn run_worktree(args: &[String], verbose: u8, global_args: &[String]) -> Result<
 
     let filtered = filter_worktree_list(&stdout);
     println!("{}", filtered);
-    timer.track("git worktree list", "tokenzip git worktree", &raw, &filtered);
+    timer.track(
+        "git worktree list",
+        "tokenzip git worktree",
+        &raw,
+        &filtered,
+    );
 
     Ok(())
 }

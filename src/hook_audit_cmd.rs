@@ -71,7 +71,9 @@ pub fn run(since_days: u64, verbose: u8) -> Result<()> {
 
     if !log_path.exists() {
         println!("No audit log found at {}", log_path.display());
-        println!("Enable audit mode: export TOKENZIP_HOOK_AUDIT=1 in your shell, then use Claude Code.");
+        println!(
+            "Enable audit mode: export TOKENZIP_HOOK_AUDIT=1 in your shell, then use Claude Code."
+        );
         return Ok(());
     }
 

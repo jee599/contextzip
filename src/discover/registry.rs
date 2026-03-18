@@ -749,7 +749,10 @@ mod tests {
 
     #[test]
     fn test_classify_rtk_already() {
-        assert_eq!(classify_command("tokenzip git status"), Classification::Ignored);
+        assert_eq!(
+            classify_command("tokenzip git status"),
+            Classification::Ignored
+        );
     }
 
     #[test]
@@ -2118,7 +2121,9 @@ mod tests {
     #[test]
     fn test_has_rtk_disabled_prefix() {
         assert!(has_rtk_disabled_prefix("TOKENZIP_DISABLED=1 git status"));
-        assert!(has_rtk_disabled_prefix("FOO=1 TOKENZIP_DISABLED=1 cargo test"));
+        assert!(has_rtk_disabled_prefix(
+            "FOO=1 TOKENZIP_DISABLED=1 cargo test"
+        ));
         assert!(has_rtk_disabled_prefix(
             "TOKENZIP_DISABLED=true git log --oneline"
         ));

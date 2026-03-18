@@ -72,7 +72,12 @@ fn run_generate(args: &[String], verbose: u8) -> Result<()> {
 
     let filtered = filter_prisma_generate(&raw);
     println!("{}", filtered);
-    timer.track("prisma generate", "tokenzip prisma generate", &raw, &filtered);
+    timer.track(
+        "prisma generate",
+        "tokenzip prisma generate",
+        &raw,
+        &filtered,
+    );
 
     Ok(())
 }

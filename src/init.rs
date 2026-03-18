@@ -483,8 +483,12 @@ pub fn uninstall(global: bool, verbose: u8) -> Result<()> {
     // 2. Remove TOKENZIP.md
     let tokenzip_md_path = claude_dir.join("TOKENZIP.md");
     if tokenzip_md_path.exists() {
-        fs::remove_file(&tokenzip_md_path)
-            .with_context(|| format!("Failed to remove TOKENZIP.md: {}", tokenzip_md_path.display()))?;
+        fs::remove_file(&tokenzip_md_path).with_context(|| {
+            format!(
+                "Failed to remove TOKENZIP.md: {}",
+                tokenzip_md_path.display()
+            )
+        })?;
         removed.push(format!("TOKENZIP.md: {}", tokenzip_md_path.display()));
     }
 
@@ -710,7 +714,8 @@ fn hook_already_present(root: &serde_json::Value, hook_command: &str) -> bool {
         .any(|cmd| {
             // Exact match OR both contain tokenzip-rewrite.sh
             cmd == hook_command
-                || (cmd.contains("tokenzip-rewrite.sh") && hook_command.contains("tokenzip-rewrite.sh"))
+                || (cmd.contains("tokenzip-rewrite.sh")
+                    && hook_command.contains("tokenzip-rewrite.sh"))
         })
 }
 
@@ -772,7 +777,10 @@ fn run_default_mode(
     };
     println!("\nRTK hook {} (global).\n", hook_status);
     println!("  Hook:      {}", hook_path.display());
-    println!("  TOKENZIP.md:    {} (10 lines)", tokenzip_md_path.display());
+    println!(
+        "  TOKENZIP.md:    {} (10 lines)",
+        tokenzip_md_path.display()
+    );
     if let Some(path) = &opencode_plugin_path {
         println!("  OpenCode:  {}", path.display());
     }
@@ -963,7 +971,10 @@ fn run_claude_md_mode(global: bool, verbose: u8, install_opencode: bool) -> Resu
         match action {
             TzBlockUpsert::Added => {
                 fs::write(&path, new_content)?;
-                println!("[ok] Added tokenzip instructions to existing {}", path.display());
+                println!(
+                    "[ok] Added tokenzip instructions to existing {}",
+                    path.display()
+                );
             }
             TzBlockUpsert::Updated => {
                 fs::write(&path, new_content)?;
@@ -1250,8 +1261,8 @@ pub fn show_config() -> Result<()> {
             let is_executable = perms.mode() & 0o111 != 0;
 
             let hook_content = fs::read_to_string(&hook_path)?;
-            let has_guards =
-                hook_content.contains("command -v tokenzip") && hook_content.contains("command -v jq");
+            let has_guards = hook_content.contains("command -v tokenzip")
+                && hook_content.contains("command -v jq");
             let is_thin_delegator = hook_content.contains("tokenzip rewrite");
             let hook_version = crate::hook_check::parse_hook_version(&hook_content);
 
@@ -1292,7 +1303,10 @@ pub fn show_config() -> Result<()> {
 
     // Check TOKENZIP.md
     if tokenzip_md_path.exists() {
-        println!("[ok] TOKENZIP.md: {} (slim mode)", tokenzip_md_path.display());
+        println!(
+            "[ok] TOKENZIP.md: {} (slim mode)",
+            tokenzip_md_path.display()
+        );
     } else {
         println!("[--] TOKENZIP.md: not found");
     }
@@ -1303,7 +1317,9 @@ pub fn show_config() -> Result<()> {
             println!("[ok] Integrity: hook hash verified");
         }
         Ok(integrity::IntegrityStatus::Tampered { .. }) => {
-            println!("[FAIL] Integrity: hook modified outside tokenzip init (run: tokenzip verify)");
+            println!(
+                "[FAIL] Integrity: hook modified outside tokenzip init (run: tokenzip verify)"
+            );
         }
         Ok(integrity::IntegrityStatus::NoBaseline) => {
             println!("[warn] Integrity: no baseline hash (run: tokenzip init -g to establish)");
@@ -1386,7 +1402,9 @@ pub fn show_config() -> Result<()> {
     println!("  tokenzip init -g --auto-patch    # Same as above but no prompt");
     println!("  tokenzip init -g --no-patch      # Skip settings.json (manual setup)");
     println!("  tokenzip init -g --uninstall     # Remove all RTK artifacts");
-    println!("  tokenzip init -g --claude-md     # Legacy: full injection into ~/.claude/CLAUDE.md");
+    println!(
+        "  tokenzip init -g --claude-md     # Legacy: full injection into ~/.claude/CLAUDE.md"
+    );
     println!("  tokenzip init -g --hook-only     # Hook only, no TOKENZIP.md");
     println!("  tokenzip init -g --opencode      # OpenCode plugin only");
 

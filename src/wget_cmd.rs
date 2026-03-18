@@ -107,7 +107,12 @@ pub fn run_stdout(url: &str, args: &[String], verbose: u8) -> Result<()> {
         let error = parse_error(&stderr, "");
         let msg = format!("{} FAILED: {}", compact_url(url), error);
         println!("{}", msg);
-        timer.track(&format!("wget -O - {}", url), "tokenzip wget -o", &stderr, &msg);
+        timer.track(
+            &format!("wget -O - {}", url),
+            "tokenzip wget -o",
+            &stderr,
+            &msg,
+        );
         std::process::exit(output.status.code().unwrap_or(1));
     }
 

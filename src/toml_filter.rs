@@ -192,12 +192,16 @@ impl TomlFilterRegistry {
                     if let Ok(content) = std::fs::read_to_string(project_filter_path) {
                         match Self::parse_and_compile(&content, "project") {
                             Ok(f) => filters.extend(f),
-                            Err(e) => eprintln!("[tokenzip] warning: .tokenzip/filters.toml: {}", e),
+                            Err(e) => {
+                                eprintln!("[tokenzip] warning: .tokenzip/filters.toml: {}", e)
+                            }
                         }
                     }
                 }
                 crate::trust::TrustStatus::Untrusted => {
-                    eprintln!("[tokenzip] WARNING: untrusted project filters (.tokenzip/filters.toml)");
+                    eprintln!(
+                        "[tokenzip] WARNING: untrusted project filters (.tokenzip/filters.toml)"
+                    );
                     eprintln!("[tokenzip] Filters NOT applied. Run `tokenzip trust` to review and enable.");
                 }
                 crate::trust::TrustStatus::ContentChanged { .. } => {
@@ -608,7 +612,10 @@ fn collect_test_outcomes(
             Ok(f) => {
                 compiled_filters.insert(name, f);
             }
-            Err(e) => eprintln!("[tokenzip] warning: filter '{}' compilation error: {}", name, e),
+            Err(e) => eprintln!(
+                "[tokenzip] warning: filter '{}' compilation error: {}",
+                name, e
+            ),
         }
     }
 

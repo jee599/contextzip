@@ -208,7 +208,8 @@ pub fn run_trust(list: bool) -> Result<()> {
     }
 
     // Read ONCE to prevent TOCTOU: display + hash from same buffer
-    let content_bytes = std::fs::read(filter_path).context("Failed to read .tokenzip/filters.toml")?;
+    let content_bytes =
+        std::fs::read(filter_path).context("Failed to read .tokenzip/filters.toml")?;
     let content = String::from_utf8_lossy(&content_bytes);
 
     println!("=== .tokenzip/filters.toml ===");

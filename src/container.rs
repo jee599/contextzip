@@ -650,7 +650,12 @@ pub fn run_compose_ps(verbose: u8) -> Result<()> {
 
     let rtk = format_compose_ps(&structured);
     println!("{}", rtk);
-    timer.track("docker compose ps", "tokenzip docker compose ps", &raw, &rtk);
+    timer.track(
+        "docker compose ps",
+        "tokenzip docker compose ps",
+        &raw,
+        &rtk,
+    );
     Ok(())
 }
 
