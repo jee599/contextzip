@@ -34,6 +34,7 @@ lazy_static! {
 /// On failure: preserves the failed step, 2 prior steps for context,
 /// the full error message, and exit code.
 /// Non-docker output passes through unchanged.
+#[allow(dead_code)]
 pub fn compress_docker_log(input: &str) -> String {
     if input.trim().is_empty() {
         return input.to_string();

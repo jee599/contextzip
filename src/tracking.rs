@@ -107,6 +107,7 @@ pub struct CommandRecord {
     /// Output tokens (filtered command output size)
     pub output_tokens: usize,
     /// Number of tokens saved (input - output)
+    #[allow(dead_code)]
     pub saved_tokens: usize,
     /// Savings percentage ((saved / input) * 100)
     pub savings_pct: f64,
@@ -1615,5 +1616,115 @@ mod tests {
             docker_feat.is_some(),
             "Expected 'docker' feature from timed execution"
         );
+    }
+
+    // 18. gain --by-feature accuracy: multiple features with known values aggregate correctly
+    #[test]
+    fn test_by_feature_aggregation_accuracy() {
+        let tracker = Tracker::new().expect("Failed to create tracker");
+        let pid = std::process::id();
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let tag = format!("{}_{}", pid, ts);
+
+        // Insert known entries for distinct features using unique cmd names
+        // Feature "ansi": 2 commands, saved = 800 + 700 = 1500
+        tracker
+            .record_with_feature("cmd", &format!("ansi_a_{}", tag), 1000, 200, 5, "ansi")
+            .expect("record ansi_a");
+        tracker
+            .record_with_feature("cmd", &format!("ansi_b_{}", tag), 800, 100, 5, "ansi")
+            .expect("record ansi_b");
+
+        // Feature "error": 1 command, saved = 450
+        tracker
+            .record_with_feature("cmd", &format!("error_a_{}", tag), 500, 50, 5, "error")
+            .expect("record error_a");
+
+        // Feature "pkg": 3 commands, saved = 1600 + 1200 + 800 = 3600
+        tracker
+            .record_with_feature("cmd", &format!("pkg_a_{}", tag), 2000, 400, 5, "pkg")
+            .expect("record pkg_a");
+        tracker
+            .record_with_feature("cmd", &format!("pkg_b_{}", tag), 1500, 300, 5, "pkg")
+            .expect("record pkg_b");
+        tracker
+            .record_with_feature("cmd", &format!("pkg_c_{}", tag), 1000, 200, 5, "pkg")
+            .expect("record pkg_c");
+
+        let features = tracker
+            .get_by_feature(None)
+            .expect("Failed to get by feature");
+
+        // Verify ansi feature: at least 2 commands, saved >= 1500
+        let ansi = features
+            .iter()
+            .find(|f| f.feature == "ansi")
+            .expect("ansi feature missing");
+        assert!(
+            ansi.commands >= 2,
+            "ansi should have >= 2 commands, got {}",
+            ansi.commands
+        );
+        assert!(
+            ansi.saved_tokens >= 1500,
+            "ansi saved should be >= 1500, got {}",
+            ansi.saved_tokens
+        );
+
+        // Verify error feature: at least 1 command, saved >= 450
+        let error = features
+            .iter()
+            .find(|f| f.feature == "error")
+            .expect("error feature missing");
+        assert!(
+            error.commands >= 1,
+            "error should have >= 1 command, got {}",
+            error.commands
+        );
+        assert!(
+            error.saved_tokens >= 450,
+            "error saved should be >= 450, got {}",
+            error.saved_tokens
+        );
+
+        // Verify pkg feature: at least 3 commands, saved >= 3600
+        let pkg = features
+            .iter()
+            .find(|f| f.feature == "pkg")
+            .expect("pkg feature missing");
+        assert!(
+            pkg.commands >= 3,
+            "pkg should have >= 3 commands, got {}",
+            pkg.commands
+        );
+        assert!(
+            pkg.saved_tokens >= 3600,
+            "pkg saved should be >= 3600, got {}",
+            pkg.saved_tokens
+        );
+
+        // Verify ordering: sorted by saved_tokens descending
+        let pkg_idx = features.iter().position(|f| f.feature == "pkg").unwrap();
+        let error_idx = features
+            .iter()
+            .position(|f| f.feature == "error")
+            .unwrap();
+        assert!(
+            pkg_idx < error_idx,
+            "pkg (more saved) should appear before error in by-feature results"
+        );
+
+        // Verify avg_savings_pct is reasonable (between 0 and 100)
+        for f in &features {
+            assert!(
+                f.avg_savings_pct >= 0.0 && f.avg_savings_pct <= 100.0,
+                "avg_savings_pct for {} should be 0-100, got {}",
+                f.feature,
+                f.avg_savings_pct
+            );
+        }
     }
 }

@@ -350,4 +350,141 @@ mod tests {
         assert!(!output.contains("████"));
         assert!(output.contains("Done"));
     }
+
+    // ── Integration tests: ANSI filter → downstream module pipelines ──
+
+    // 16. ANSI → Error pipeline: ANSI-colored stacktrace
+    #[test]
+    fn test_pipeline_ansi_then_error_compress() {
+        use crate::error_cmd::compress_errors;
+
+        // Node.js stacktrace with ANSI color codes
+        let input = "\x1b[31mTypeError: Cannot read properties of undefined (reading 'id')\x1b[0m\n\
+            \x1b[90m    at getUserProfile (/app/src/api/users.ts:47:12)\x1b[0m\n\
+            \x1b[90m    at processAuth (/app/src/middleware/auth.ts:12:5)\x1b[0m\n\
+            \x1b[90m    at Module._compile (node:internal/modules/cjs/loader:1376:14)\x1b[0m\n\
+            \x1b[90m    at Router.handle (/app/node_modules/express/lib/router/index.js:45:12)\x1b[0m\n\
+            \x1b[90m    at Layer.handle (/app/node_modules/express/lib/router/layer.js:95:5)\x1b[0m";
+
+        // Step 1: Strip ANSI
+        let ansi_cleaned = filter_ansi(input);
+        assert!(!ansi_cleaned.contains("\x1b["), "ANSI codes must be stripped");
+
+        // Step 2: Compress errors
+        let result = compress_errors(&ansi_cleaned);
+
+        // Verify error message preserved
+        assert!(result.contains("TypeError: Cannot read properties of undefined"));
+        // Verify user code frames preserved
+        assert!(result.contains("src/api/users.ts:47"));
+        assert!(result.contains("src/middleware/auth.ts:12"));
+        // Verify framework frames removed
+        assert!(!result.contains("node:internal"), "node:internal should be removed");
+        assert!(!result.contains("node_modules"), "node_modules should be removed");
+        // Verify hidden count shown
+        assert!(result.contains("framework frames hidden"));
+    }
+
+    // 17. ANSI → Docker pipeline: Docker build output with ANSI + progress bars
+    #[test]
+    fn test_pipeline_ansi_then_docker_compress() {
+        use crate::docker_cmd::compress_docker_log;
+
+        let input = "\x1b[1mStep 1/5 : FROM node:20\x1b[0m\n\
+            \x1b[90m ---> abc123\x1b[0m\n\
+            ████░░░░░░ 40%\n\
+            ████████░░ 80%\n\
+            ██████████ 100%\n\
+            \x1b[1mStep 2/5 : WORKDIR /app\x1b[0m\n\
+            \x1b[90m ---> Using cache\x1b[0m\n\
+            \x1b[90m ---> def456\x1b[0m\n\
+            \x1b[1mStep 3/5 : COPY . .\x1b[0m\n\
+            \x1b[90m ---> Using cache\x1b[0m\n\
+            \x1b[90m ---> ghi789\x1b[0m\n\
+            \x1b[1mStep 4/5 : RUN echo hello\x1b[0m\n\
+            \x1b[90m ---> jkl012\x1b[0m\n\
+            \x1b[1mStep 5/5 : CMD [\"node\", \".\"]\x1b[0m\n\
+            \x1b[90m ---> mno345\x1b[0m\n\
+            \x1b[32mSuccessfully built mno345\x1b[0m\n\
+            \x1b[32mSuccessfully tagged myapp:latest\x1b[0m";
+
+        // Step 1: Strip ANSI + progress bars
+        let ansi_cleaned = filter_ansi(input);
+        assert!(!ansi_cleaned.contains("\x1b["), "ANSI codes must be stripped");
+        assert!(!ansi_cleaned.contains("40%"), "Intermediate progress should be stripped");
+
+        // Step 2: Compress docker log
+        let result = compress_docker_log(&ansi_cleaned);
+
+        // Should be a successful build summary
+        assert!(result.contains("myapp:latest"), "Should contain image tag: {}", result);
+        assert!(result.contains("5 steps"), "Should contain step count: {}", result);
+        // Should be compact (1 line for success)
+        assert_eq!(result.lines().count(), 1, "Success should be 1 line: {}", result);
+    }
+
+    // 18. ANSI → Build pipeline: tsc errors with ANSI colors
+    #[test]
+    fn test_pipeline_ansi_then_build_group() {
+        use crate::build_cmd::group_build_errors;
+
+        let input = "\x1b[31msrc/api/users.ts(47,5): error TS2322: Type 'string' is not assignable to type 'number'.\x1b[0m\n\
+            \x1b[31msrc/api/users.ts(83,10): error TS2322: Type 'string' is not assignable to type 'number'.\x1b[0m\n\
+            \x1b[31msrc/api/orders.ts(12,3): error TS2345: Argument of type 'number' is not assignable.\x1b[0m\n\
+            \x1b[31msrc/api/products.ts(23,1): error TS2322: Type 'string' is not assignable to type 'number'.\x1b[0m";
+
+        // Step 1: Strip ANSI
+        let ansi_cleaned = filter_ansi(input);
+        assert!(!ansi_cleaned.contains("\x1b["), "ANSI codes must be stripped");
+
+        // Step 2: Group build errors
+        let result = group_build_errors(&ansi_cleaned);
+
+        // Errors should be grouped by code
+        assert!(result.contains("TS2322"), "Should contain TS2322 group");
+        assert!(result.contains("TS2345"), "Should contain TS2345 group");
+        // All line numbers preserved
+        assert!(result.contains(":47"), "Line 47 must be preserved");
+        assert!(result.contains(":83"), "Line 83 must be preserved");
+        assert!(result.contains(":12"), "Line 12 must be preserved");
+        assert!(result.contains(":23"), "Line 23 must be preserved");
+        // Grouping count shown
+        assert!(result.contains("(x3)"), "TS2322 should appear 3 times: {}", result);
+    }
+
+    // 19. ANSI → Pkg pipeline: npm install with ANSI colors
+    #[test]
+    fn test_pipeline_ansi_then_pkg_compress() {
+        use crate::pkg_cmd::compress_pkg_log;
+
+        let input = "\x1b[33mnpm warn deprecated\x1b[0m rimraf@3.0.2: Rimraf versions prior to v4\n\
+            \x1b[33mnpm warn deprecated\x1b[0m inflight@1.0.6: This module is not supported\n\
+            ⠋ Installing packages...\n\
+            ⠙ Installing packages...\n\
+            ═══════════════════════════════\n\
+            \x1b[32madded 847 packages, and audited 848 packages in 32s\x1b[0m\n\
+            \n\
+            \x1b[33m143 packages are looking for funding\x1b[0m\n\
+            \x1b[33m  run `npm fund` for details\x1b[0m\n\
+            \n\
+            \x1b[31m8 vulnerabilities (6 high, 2 moderate)\x1b[0m";
+
+        // Step 1: Strip ANSI + spinners + decorations
+        let ansi_cleaned = filter_ansi(input);
+        assert!(!ansi_cleaned.contains("\x1b["), "ANSI codes must be stripped");
+        assert!(!ansi_cleaned.contains("⠋"), "Spinners should be stripped");
+        assert!(!ansi_cleaned.contains("═══"), "Decorations should be stripped");
+
+        // Step 2: Compress pkg log
+        let result = compress_pkg_log(&ansi_cleaned);
+
+        // Summary should be present
+        assert!(result.contains("847 packages"), "Package count should be preserved: {}", result);
+        // Deprecated warnings removed
+        assert!(!result.contains("rimraf@3.0.2"), "Non-security deprecated should be removed");
+        // Funding removed
+        assert!(!result.contains("looking for funding"), "Funding should be removed");
+        // Vulnerability warning preserved
+        assert!(result.contains("vulnerabilities"), "Vulnerability summary should be preserved: {}", result);
+    }
 }
