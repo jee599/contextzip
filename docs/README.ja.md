@@ -9,6 +9,10 @@
 ## 5秒セットアップ
 
 ```bash
+# Homebrew (macOS/Linux)
+brew install jee599/tap/tokenzip
+
+# または curl
 curl -fsSL https://raw.githubusercontent.com/jee599/tokenzip/main/install.sh | bash
 ```
 
