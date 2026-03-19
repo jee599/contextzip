@@ -82,7 +82,10 @@ const NOISE_PATTERNS: &[&str] = &[
     "social",
     "share",
     "follow",
-    "ad",
+    "ad-",
+    "ad_",
+    "ads",
+    "advert",
     "advertisement",
     "sponsor",
 ];
