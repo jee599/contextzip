@@ -1,8 +1,8 @@
-# Rust Patterns — RTK Development Rules
+# Rust Patterns — TokenZip Development Rules
 
-RTK-specific Rust idioms and constraints. Applied to all code in this repository.
+TokenZip-specific Rust idioms and constraints. Applied to all code in this repository.
 
-## Non-Negotiable RTK Rules
+## Non-Negotiable TokenZip Rules
 
 These override general Rust conventions:
 
@@ -49,7 +49,7 @@ pub fn run(args: MyArgs) -> Result<()> {
 
     let filtered = filter_output(&output.stdout)
         .unwrap_or_else(|e| {
-            eprintln!("rtk: filter warning: {}", e);
+            eprintln!("tokenzip: filter warning: {}", e);
             output.stdout.clone()  // Passthrough on failure
         });
 
@@ -86,7 +86,7 @@ fn is_error_line(line: &str) -> bool {
 }
 ```
 
-Note: `lazy_static!` with `.unwrap()` for initialization is the **established RTK pattern** — it's acceptable because a bad regex literal is a programming error caught at first use.
+Note: `lazy_static!` with `.unwrap()` for initialization is the **established TokenZip pattern** — it's acceptable because a bad regex literal is a programming error caught at first use.
 
 ## Ownership — Borrow Over Clone
 
@@ -197,12 +197,12 @@ fn process(input: &String) -> String {  // ❌ Unnecessary &String
 match result {
     Ok(output) => process(output),
     Err(e) => {
-        eprintln!("rtk: filter warning: {}", e);
+        eprintln!("tokenzip: filter warning: {}", e);
         fallback()
     }
 }
 
-// ❌ Silent swallow — catastrophic in RTK (user gets no output)
+// ❌ Silent swallow — catastrophic in TokenZip (user gets no output)
 match result {
     Ok(output) => process(output),
     Err(_) => {}
@@ -240,7 +240,7 @@ mod tests {
 }
 ```
 
-## Anti-Patterns (RTK-Specific)
+## Anti-Patterns (TokenZip-Specific)
 
 | Pattern | Problem | Fix |
 |---------|---------|-----|

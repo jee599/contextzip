@@ -1,6 +1,6 @@
-# Search Strategy — RTK Codebase Navigation
+# Search Strategy — TokenZip Codebase Navigation
 
-Efficient search patterns for RTK's Rust codebase.
+Efficient search patterns for TokenZip's Rust codebase.
 
 ## Priority Order
 
@@ -11,7 +11,7 @@ Efficient search patterns for RTK's Rust codebase.
 
 Never use Bash for search (`find`, `grep`, `rg`) — use dedicated tools.
 
-## RTK Module Map
+## TokenZip Module Map
 
 ```
 src/
@@ -24,10 +24,10 @@ src/
 ├── read.rs           ← File reading with filter levels
 ├── filter.rs         ← Language-aware code filtering engine
 ├── tracking.rs       ← SQLite token metrics
-├── config.rs         ← ~/.config/rtk/config.toml
+├── config.rs         ← ~/.config/tokenzip/config.toml
 ├── tee.rs            ← Raw output recovery on failure
 ├── utils.rs          ← strip_ansi, truncate, execute_command
-├── init.rs           ← rtk init command
+├── init.rs           ← tokenzip init command
 └── *_cmd.rs          ← All other command modules
 ```
 
@@ -87,7 +87,7 @@ Grep pattern="count_tokens\|savings" type="rust" output_mode="content"
 Glob pattern="tests/fixtures/*.txt"
 ```
 
-## RTK-Specific Navigation Rules
+## TokenZip-Specific Navigation Rules
 
 ### Adding a new filter
 
@@ -112,14 +112,14 @@ Glob pattern="tests/fixtures/*.txt"
 ### Configuration issues
 
 1. `src/config.rs` → `RtkConfig` struct
-2. `src/init.rs` → `rtk init` command
-3. Config file: `~/.config/rtk/config.toml`
-4. Filter files: `~/.config/rtk/filters/` (global) or `.rtk/filters/` (project)
+2. `src/init.rs` → `tokenzip init` command
+3. Config file: `~/.config/tokenzip/config.toml`
+4. Filter files: `~/.config/tokenzip/filters/` (global) or `.tokenzip/filters/` (project)
 
 ## TOML Filter DSL Navigation
 
 ```
-Glob pattern=".rtk/filters/*.toml"         # Project-local filters
+Glob pattern=".tokenzip/filters/*.toml"         # Project-local filters
 Glob pattern="src/filter_*.rs"             # TOML filter engine
 Grep pattern="FilterRule\|FilterConfig" type="rust"
 ```
