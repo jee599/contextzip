@@ -25,7 +25,7 @@ lazy_static! {
     // Java
     static ref JAVA_FRAMEWORK_RE: Regex = Regex::new(r"java\.lang\.reflect\.|sun\.reflect\.|org\.springframework\.|java\.util\.concurrent\.|jdk\.internal\.|java\.net\.|sun\.net\.|org\.apache\.").unwrap();
     // Go
-    static ref GO_FRAMEWORK_RE: Regex = Regex::new(r"^\s*(runtime/|runtime/debug\.|net/http\.)").unwrap();
+    static ref GO_FRAMEWORK_RE: Regex = Regex::new(r"^\s*(runtime[./]|net/http\.)").unwrap();
     static ref GO_FRAME_RE: Regex = Regex::new(r"^\s+.+\.go:\d+").unwrap();
     static ref GO_FUNC_RE: Regex = Regex::new(r"^[\w./]+\(").unwrap();
     // Rust
@@ -274,7 +274,7 @@ fn compress_rust(input: &str) -> String {
 
             // Framework if function name or at-path matches
             let is_framework = is_rust_framework_line(line)
-                || at_line.is_some_and(|l| is_rust_framework_line(l));
+                || at_line.is_some_and(is_rust_framework_line);
 
             if is_framework {
                 hidden_count += 1;
@@ -338,29 +338,54 @@ fn compress_rust(input: &str) -> String {
 }
 
 fn compress_go(input: &str) -> String {
+    let lines: Vec<&str> = input.lines().collect();
     let mut result = Vec::new();
     let mut hidden_count = 0;
+    let mut i = 0;
 
-    for line in input.lines() {
-        // Go frames alternate: function line, then file:line line
-        let is_go_file_frame = GO_FRAME_RE.is_match(line);
+    while i < lines.len() {
+        let line = lines[i];
         let is_go_func = GO_FUNC_RE.is_match(line.trim());
 
-        if (is_go_file_frame || is_go_func) && GO_FRAMEWORK_RE.is_match(line) {
-            hidden_count += 1;
+        if is_go_func {
+            // Function line — check if it's a framework function
+            let is_framework = GO_FRAMEWORK_RE.is_match(line.trim());
+
+            if is_framework {
+                // Hide this function line and its following file line
+                hidden_count += 1;
+                i += 1;
+                // Skip the paired file:line line if present
+                if i < lines.len() && GO_FRAME_RE.is_match(lines[i]) {
+                    i += 1;
+                }
+                continue;
+            }
+
+            // User function — keep both function and file lines
+            result.push(format!("  → {}", line.trim()));
+            i += 1;
+            if i < lines.len() && GO_FRAME_RE.is_match(lines[i]) {
+                result.push(format!("  → {}", lines[i].trim()));
+                i += 1;
+            }
             continue;
         }
 
-        if is_go_file_frame || is_go_func {
-            // User code
+        let is_go_file_frame = GO_FRAME_RE.is_match(line);
+        if is_go_file_frame {
+            // Standalone file line (shouldn't happen in well-formed traces, but handle it)
             result.push(format!("  → {}", line.trim()));
         } else {
+            // Non-frame line (goroutine header, etc.)
             if hidden_count > 0 {
                 result.push(format!("  (+ {} framework frames hidden)", hidden_count));
                 hidden_count = 0;
             }
             result.push(line.to_string());
         }
+
+        i += 1;
     }
 
     if hidden_count > 0 {
@@ -574,6 +599,37 @@ main.main()
         // Must remove runtime frames
         assert!(!result.contains("runtime/debug.Stack"));
         assert!(!result.contains("runtime/debug.PrintStack"));
+        // Must show hidden count
+        assert!(result.contains("framework frames hidden"));
+    }
+
+    #[test]
+    fn test_go_user_frames_not_dropped() {
+        let input = r#"goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:24
+runtime.gopanic({0x1234, 0x5678})
+	/usr/local/go/src/runtime/panic.go:884
+main.handler()
+	/app/handler.go:42 +0x1a4
+main.main()
+	/app/main.go:15 +0x58
+runtime.main()
+	/usr/local/go/src/runtime/proc.go:267"#;
+
+        let result = compress_errors(input);
+
+        // Must preserve goroutine header
+        assert!(result.contains("goroutine 1 [running]"));
+        // Must keep user code frames
+        assert!(result.contains("main.handler()"));
+        assert!(result.contains("handler.go:42"));
+        assert!(result.contains("main.main()"));
+        assert!(result.contains("main.go:15"));
+        // Must remove ALL runtime frames
+        assert!(!result.contains("runtime/debug.Stack"));
+        assert!(!result.contains("runtime.gopanic"));
+        assert!(!result.contains("runtime.main"));
         // Must show hidden count
         assert!(result.contains("framework frames hidden"));
     }
