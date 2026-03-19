@@ -52,12 +52,11 @@ npx contextzip
 curl -fsSL https://raw.githubusercontent.com/jee599/contextzip/main/install.sh | bash
 brew install jee599/tap/contextzip
 
-# Windows (PowerShell)
-npx contextzip
-
 # Rust developers
 cargo install --git https://github.com/jee599/contextzip
 ```
+
+`npx contextzip` works on all platforms (macOS, Linux, Windows).
 
 </details>
 
