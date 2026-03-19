@@ -6,7 +6,7 @@
 
 <h3 align="center">
   Claude's output is full of noise you don't need.<br>
-  ContextZip compresses it by 60-90%. <code>curl | bash</code> → 5 seconds.
+  ContextZip compresses it by 60-90%. <code>npx contextzip</code> → 5 seconds.
 </h3>
 
 <p align="center">
@@ -38,15 +38,16 @@
 <h3 align="center">⬇️ One line. That's it.</h3>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jee599/contextzip/main/install.sh | bash
+npx contextzip
 ```
 
 <p align="center">Restart Claude Code. Every command is now compressed. Zero config.</p>
 
 <details>
-<summary>brew / cargo install</summary>
+<summary>curl / brew / cargo install</summary>
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/jee599/contextzip/main/install.sh | bash   # curl
 brew install jee599/tap/contextzip          # Homebrew
 cargo install --git https://github.com/jee599/contextzip   # Cargo
 ```
