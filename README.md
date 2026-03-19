@@ -5,8 +5,8 @@
 </h1>
 
 <h3 align="center">
-  Your Claude Code burns tokens on garbage.<br>
-  <code>curl | bash</code> → restart → done. 5 seconds.
+  Claude's output is full of noise you don't need.<br>
+  ContextZip compresses it by 60-90%. <code>curl | bash</code> → 5 seconds.
 </h3>
 
 <p align="center">
