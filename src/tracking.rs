@@ -348,11 +348,11 @@ impl Tracker {
             [],
         );
 
-        // Migration: rename rtk_cmd → contextzip_cmd column
-        let has_rtk_col: bool = conn
+        // Migration: rename legacy rtk_cmd column (from upstream RTK) → contextzip_cmd
+        let has_legacy_col: bool = conn
             .prepare("SELECT rtk_cmd FROM commands LIMIT 0")
             .is_ok();
-        if has_rtk_col {
+        if has_legacy_col {
             let _ = conn.execute("ALTER TABLE commands RENAME COLUMN rtk_cmd TO contextzip_cmd", []);
         }
 
@@ -1181,7 +1181,7 @@ fn print_savings(input_tokens: usize, output_tokens: usize) {
 ///
 /// let timer = TimedExecution::start();
 /// let input = execute_standard_command()?;
-/// let output = execute_rtk_command()?;
+/// let output = execute_contextzip_command()?;
 /// timer.track("ls -la", "contextzip ls", &input, &output);
 /// # Ok::<(), anyhow::Error>(())
 /// ```

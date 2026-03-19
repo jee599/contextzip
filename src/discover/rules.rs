@@ -1,14 +1,14 @@
-use super::report::RtkStatus;
+use super::report::CzStatus;
 
-/// A rule mapping a shell command pattern to its RTK equivalent.
-pub struct RtkRule {
-    pub rtk_cmd: &'static str,
-    /// Original command prefixes to replace with rtk_cmd (longest first for correct matching).
+/// A rule mapping a shell command pattern to its ContextZip equivalent.
+pub struct CzRule {
+    pub cz_cmd: &'static str,
+    /// Original command prefixes to replace with cz_cmd (longest first for correct matching).
     pub rewrite_prefixes: &'static [&'static str],
     pub category: &'static str,
     pub savings_pct: f64,
     pub subcmd_savings: &'static [(&'static str, f64)],
-    pub subcmd_status: &'static [(&'static str, RtkStatus)],
+    pub subcmd_status: &'static [(&'static str, CzStatus)],
 }
 
 // Patterns ordered to match RULES indices exactly.
@@ -83,9 +83,9 @@ pub const PATTERNS: &[&str] = &[
     r"^yamllint\b",
 ];
 
-pub const RULES: &[RtkRule] = &[
-    RtkRule {
-        rtk_cmd: "contextzip git",
+pub const RULES: &[CzRule] = &[
+    CzRule {
+        cz_cmd: "contextzip git",
         rewrite_prefixes: &["git"],
         category: "Git",
         savings_pct: 70.0,
@@ -97,89 +97,89 @@ pub const RULES: &[RtkRule] = &[
         ],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip gh",
+    CzRule {
+        cz_cmd: "contextzip gh",
         rewrite_prefixes: &["gh"],
         category: "GitHub",
         savings_pct: 82.0,
         subcmd_savings: &[("pr", 87.0), ("run", 82.0), ("issue", 80.0)],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip cargo",
+    CzRule {
+        cz_cmd: "contextzip cargo",
         rewrite_prefixes: &["cargo"],
         category: "Cargo",
         savings_pct: 80.0,
         subcmd_savings: &[("test", 90.0), ("check", 80.0)],
-        subcmd_status: &[("fmt", RtkStatus::Passthrough)],
+        subcmd_status: &[("fmt", CzStatus::Passthrough)],
     },
-    RtkRule {
-        rtk_cmd: "contextzip pnpm",
+    CzRule {
+        cz_cmd: "contextzip pnpm",
         rewrite_prefixes: &["pnpm"],
         category: "PackageManager",
         savings_pct: 80.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip npm",
+    CzRule {
+        cz_cmd: "contextzip npm",
         rewrite_prefixes: &["npm"],
         category: "PackageManager",
         savings_pct: 70.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip npx",
+    CzRule {
+        cz_cmd: "contextzip npx",
         rewrite_prefixes: &["npx"],
         category: "PackageManager",
         savings_pct: 70.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip read",
+    CzRule {
+        cz_cmd: "contextzip read",
         rewrite_prefixes: &["cat", "head", "tail"],
         category: "Files",
         savings_pct: 60.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip grep",
+    CzRule {
+        cz_cmd: "contextzip grep",
         rewrite_prefixes: &["rg", "grep"],
         category: "Files",
         savings_pct: 75.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip ls",
+    CzRule {
+        cz_cmd: "contextzip ls",
         rewrite_prefixes: &["ls"],
         category: "Files",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip find",
+    CzRule {
+        cz_cmd: "contextzip find",
         rewrite_prefixes: &["find"],
         category: "Files",
         savings_pct: 70.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
+    CzRule {
         // Longest prefixes first for correct matching
-        rtk_cmd: "contextzip tsc",
+        cz_cmd: "contextzip tsc",
         rewrite_prefixes: &["pnpm tsc", "npx tsc", "tsc"],
         category: "Build",
         savings_pct: 83.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip lint",
+    CzRule {
+        cz_cmd: "contextzip lint",
         rewrite_prefixes: &[
             "npx eslint",
             "pnpm lint",
@@ -193,97 +193,97 @@ pub const RULES: &[RtkRule] = &[
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip prettier",
+    CzRule {
+        cz_cmd: "contextzip prettier",
         rewrite_prefixes: &["npx prettier", "pnpm prettier", "prettier"],
         category: "Build",
         savings_pct: 70.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
+    CzRule {
         // "next build" is stripped to "contextzip next" — the build subcommand is internal
-        rtk_cmd: "contextzip next",
+        cz_cmd: "contextzip next",
         rewrite_prefixes: &["npx next build", "pnpm next build", "next build"],
         category: "Build",
         savings_pct: 87.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip vitest",
+    CzRule {
+        cz_cmd: "contextzip vitest",
         rewrite_prefixes: &["pnpm vitest", "npx vitest", "vitest", "jest"],
         category: "Tests",
         savings_pct: 99.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip playwright",
+    CzRule {
+        cz_cmd: "contextzip playwright",
         rewrite_prefixes: &["npx playwright", "pnpm playwright", "playwright"],
         category: "Tests",
         savings_pct: 94.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip prisma",
+    CzRule {
+        cz_cmd: "contextzip prisma",
         rewrite_prefixes: &["npx prisma", "pnpm prisma", "prisma"],
         category: "Build",
         savings_pct: 88.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip docker",
+    CzRule {
+        cz_cmd: "contextzip docker",
         rewrite_prefixes: &["docker"],
         category: "Infra",
         savings_pct: 85.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip kubectl",
+    CzRule {
+        cz_cmd: "contextzip kubectl",
         rewrite_prefixes: &["kubectl"],
         category: "Infra",
         savings_pct: 85.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip tree",
+    CzRule {
+        cz_cmd: "contextzip tree",
         rewrite_prefixes: &["tree"],
         category: "Files",
         savings_pct: 70.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip diff",
+    CzRule {
+        cz_cmd: "contextzip diff",
         rewrite_prefixes: &["diff"],
         category: "Files",
         savings_pct: 60.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip curl",
+    CzRule {
+        cz_cmd: "contextzip curl",
         rewrite_prefixes: &["curl"],
         category: "Network",
         savings_pct: 70.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip wget",
+    CzRule {
+        cz_cmd: "contextzip wget",
         rewrite_prefixes: &["wget"],
         category: "Network",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip mypy",
+    CzRule {
+        cz_cmd: "contextzip mypy",
         rewrite_prefixes: &["python3 -m mypy", "python -m mypy", "mypy"],
         category: "Build",
         savings_pct: 80.0,
@@ -291,24 +291,24 @@ pub const RULES: &[RtkRule] = &[
         subcmd_status: &[],
     },
     // Python tooling
-    RtkRule {
-        rtk_cmd: "contextzip ruff",
+    CzRule {
+        cz_cmd: "contextzip ruff",
         rewrite_prefixes: &["ruff"],
         category: "Python",
         savings_pct: 80.0,
         subcmd_savings: &[("check", 80.0), ("format", 75.0)],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip pytest",
+    CzRule {
+        cz_cmd: "contextzip pytest",
         rewrite_prefixes: &["python -m pytest", "pytest"],
         category: "Python",
         savings_pct: 90.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip pip",
+    CzRule {
+        cz_cmd: "contextzip pip",
         rewrite_prefixes: &["pip3", "pip", "uv pip"],
         category: "Python",
         savings_pct: 75.0,
@@ -316,16 +316,16 @@ pub const RULES: &[RtkRule] = &[
         subcmd_status: &[],
     },
     // Go tooling
-    RtkRule {
-        rtk_cmd: "contextzip go",
+    CzRule {
+        cz_cmd: "contextzip go",
         rewrite_prefixes: &["go"],
         category: "Go",
         savings_pct: 85.0,
         subcmd_savings: &[("test", 90.0), ("build", 80.0), ("vet", 75.0)],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip golangci-lint",
+    CzRule {
+        cz_cmd: "contextzip golangci-lint",
         rewrite_prefixes: &["golangci-lint", "golangci"],
         category: "Go",
         savings_pct: 85.0,
@@ -333,8 +333,8 @@ pub const RULES: &[RtkRule] = &[
         subcmd_status: &[],
     },
     // AWS CLI
-    RtkRule {
-        rtk_cmd: "contextzip aws",
+    CzRule {
+        cz_cmd: "contextzip aws",
         rewrite_prefixes: &["aws"],
         category: "Infra",
         savings_pct: 80.0,
@@ -342,8 +342,8 @@ pub const RULES: &[RtkRule] = &[
         subcmd_status: &[],
     },
     // PostgreSQL
-    RtkRule {
-        rtk_cmd: "contextzip psql",
+    CzRule {
+        cz_cmd: "contextzip psql",
         rewrite_prefixes: &["psql"],
         category: "Infra",
         savings_pct: 75.0,
@@ -351,256 +351,256 @@ pub const RULES: &[RtkRule] = &[
         subcmd_status: &[],
     },
     // TOML-filtered commands
-    RtkRule {
-        rtk_cmd: "contextzip ansible-playbook",
+    CzRule {
+        cz_cmd: "contextzip ansible-playbook",
         rewrite_prefixes: &["ansible-playbook"],
         category: "Infra",
         savings_pct: 70.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip brew",
+    CzRule {
+        cz_cmd: "contextzip brew",
         rewrite_prefixes: &["brew"],
         category: "PackageManager",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip composer",
+    CzRule {
+        cz_cmd: "contextzip composer",
         rewrite_prefixes: &["composer"],
         category: "PackageManager",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip df",
+    CzRule {
+        cz_cmd: "contextzip df",
         rewrite_prefixes: &["df"],
         category: "System",
         savings_pct: 60.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip dotnet",
+    CzRule {
+        cz_cmd: "contextzip dotnet",
         rewrite_prefixes: &["dotnet"],
         category: "Build",
         savings_pct: 70.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip du",
+    CzRule {
+        cz_cmd: "contextzip du",
         rewrite_prefixes: &["du"],
         category: "System",
         savings_pct: 60.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip fail2ban-client",
+    CzRule {
+        cz_cmd: "contextzip fail2ban-client",
         rewrite_prefixes: &["fail2ban-client"],
         category: "Infra",
         savings_pct: 60.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip gcloud",
+    CzRule {
+        cz_cmd: "contextzip gcloud",
         rewrite_prefixes: &["gcloud"],
         category: "Infra",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip hadolint",
+    CzRule {
+        cz_cmd: "contextzip hadolint",
         rewrite_prefixes: &["hadolint"],
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip helm",
+    CzRule {
+        cz_cmd: "contextzip helm",
         rewrite_prefixes: &["helm"],
         category: "Infra",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip iptables",
+    CzRule {
+        cz_cmd: "contextzip iptables",
         rewrite_prefixes: &["iptables"],
         category: "Infra",
         savings_pct: 60.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip make",
+    CzRule {
+        cz_cmd: "contextzip make",
         rewrite_prefixes: &["make"],
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip markdownlint",
+    CzRule {
+        cz_cmd: "contextzip markdownlint",
         rewrite_prefixes: &["markdownlint"],
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip mix",
+    CzRule {
+        cz_cmd: "contextzip mix",
         rewrite_prefixes: &["mix"],
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip mvn",
+    CzRule {
+        cz_cmd: "contextzip mvn",
         rewrite_prefixes: &["mvn"],
         category: "Build",
         savings_pct: 70.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip ping",
+    CzRule {
+        cz_cmd: "contextzip ping",
         rewrite_prefixes: &["ping"],
         category: "Network",
         savings_pct: 60.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip pio",
+    CzRule {
+        cz_cmd: "contextzip pio",
         rewrite_prefixes: &["pio"],
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip poetry",
+    CzRule {
+        cz_cmd: "contextzip poetry",
         rewrite_prefixes: &["poetry"],
         category: "Python",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip pre-commit",
+    CzRule {
+        cz_cmd: "contextzip pre-commit",
         rewrite_prefixes: &["pre-commit"],
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip ps",
+    CzRule {
+        cz_cmd: "contextzip ps",
         rewrite_prefixes: &["ps"],
         category: "System",
         savings_pct: 60.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip quarto",
+    CzRule {
+        cz_cmd: "contextzip quarto",
         rewrite_prefixes: &["quarto"],
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip rsync",
+    CzRule {
+        cz_cmd: "contextzip rsync",
         rewrite_prefixes: &["rsync"],
         category: "Network",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip shellcheck",
+    CzRule {
+        cz_cmd: "contextzip shellcheck",
         rewrite_prefixes: &["shellcheck"],
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip shopify",
+    CzRule {
+        cz_cmd: "contextzip shopify",
         rewrite_prefixes: &["shopify"],
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip sops",
+    CzRule {
+        cz_cmd: "contextzip sops",
         rewrite_prefixes: &["sops"],
         category: "Infra",
         savings_pct: 60.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip swift",
+    CzRule {
+        cz_cmd: "contextzip swift",
         rewrite_prefixes: &["swift"],
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip systemctl",
+    CzRule {
+        cz_cmd: "contextzip systemctl",
         rewrite_prefixes: &["systemctl"],
         category: "System",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip terraform",
+    CzRule {
+        cz_cmd: "contextzip terraform",
         rewrite_prefixes: &["terraform"],
         category: "Infra",
         savings_pct: 70.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip tofu",
+    CzRule {
+        cz_cmd: "contextzip tofu",
         rewrite_prefixes: &["tofu"],
         category: "Infra",
         savings_pct: 70.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip trunk",
+    CzRule {
+        cz_cmd: "contextzip trunk",
         rewrite_prefixes: &["trunk"],
         category: "Build",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip uv",
+    CzRule {
+        cz_cmd: "contextzip uv",
         rewrite_prefixes: &["uv"],
         category: "Python",
         savings_pct: 65.0,
         subcmd_savings: &[],
         subcmd_status: &[],
     },
-    RtkRule {
-        rtk_cmd: "contextzip yamllint",
+    CzRule {
+        cz_cmd: "contextzip yamllint",
         rewrite_prefixes: &["yamllint"],
         category: "Build",
         savings_pct: 65.0,
@@ -609,7 +609,7 @@ pub const RULES: &[RtkRule] = &[
     },
 ];
 
-/// Commands to ignore (shell builtins, trivial, already rtk).
+/// Commands to ignore (shell builtins, trivial, already contextzip).
 pub const IGNORED_PREFIXES: &[&str] = &[
     "cd ",
     "cd\t",

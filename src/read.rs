@@ -53,17 +53,17 @@ pub fn run(
 
     filtered = apply_line_window(&filtered, max_lines, tail_lines, &lang);
 
-    let rtk_output = if line_numbers {
+    let compressed = if line_numbers {
         format_with_line_numbers(&filtered)
     } else {
         filtered.clone()
     };
-    println!("{}", rtk_output);
+    println!("{}", compressed);
     timer.track(
         &format!("cat {}", file.display()),
         "contextzip read",
         &content,
-        &rtk_output,
+        &compressed,
     );
     Ok(())
 }
@@ -117,14 +117,14 @@ pub fn run_stdin(
 
     filtered = apply_line_window(&filtered, max_lines, tail_lines, &lang);
 
-    let rtk_output = if line_numbers {
+    let compressed = if line_numbers {
         format_with_line_numbers(&filtered)
     } else {
         filtered.clone()
     };
-    println!("{}", rtk_output);
+    println!("{}", compressed);
 
-    timer.track("cat - (stdin)", "contextzip read -", &content, &rtk_output);
+    timer.track("cat - (stdin)", "contextzip read -", &content, &compressed);
     Ok(())
 }
 

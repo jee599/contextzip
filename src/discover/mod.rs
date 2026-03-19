@@ -8,14 +8,14 @@ use std::collections::HashMap;
 
 use provider::{ClaudeProvider, SessionProvider};
 use registry::{
-    category_avg_tokens, classify_command, has_rtk_disabled_prefix, split_command_chain,
+    category_avg_tokens, classify_command, has_disabled_prefix, split_command_chain,
     strip_disabled_prefix, Classification,
 };
 use report::{DiscoverReport, SupportedEntry, UnsupportedEntry};
 
 /// Aggregation bucket for supported commands.
 struct SupportedBucket {
-    rtk_equivalent: &'static str,
+    cz_equivalent: &'static str,
     category: &'static str,
     count: usize,
     total_output_tokens: usize,
@@ -63,10 +63,10 @@ pub fn run(
     }
 
     let mut total_commands: usize = 0;
-    let mut already_rtk: usize = 0;
+    let mut already_contextzip: usize = 0;
     let mut parse_errors: usize = 0;
-    let mut rtk_disabled_count: usize = 0;
-    let mut rtk_disabled_cmds: HashMap<String, usize> = HashMap::new();
+    let mut disabled_count: usize = 0;
+    let mut disabled_cmds: HashMap<String, usize> = HashMap::new();
     let mut supported_map: HashMap<&'static str, SupportedBucket> = HashMap::new();
     let mut unsupported_map: HashMap<String, UnsupportedBucket> = HashMap::new();
 
@@ -88,14 +88,14 @@ pub fn run(
                 total_commands += 1;
 
                 // Detect CONTEXTZIP_DISABLED= bypass before classification
-                if has_rtk_disabled_prefix(part) {
+                if has_disabled_prefix(part) {
                     let actual_cmd = strip_disabled_prefix(part);
                     // Only count if the underlying command is one RTK supports
                     match classify_command(actual_cmd) {
                         Classification::Supported { .. } => {
-                            rtk_disabled_count += 1;
+                            disabled_count += 1;
                             let display = truncate_command(actual_cmd);
-                            *rtk_disabled_cmds.entry(display).or_insert(0) += 1;
+                            *disabled_cmds.entry(display).or_insert(0) += 1;
                         }
                         _ => {
                             // CONTEXTZIP_DISABLED on unsupported/ignored command — not interesting
@@ -106,14 +106,14 @@ pub fn run(
 
                 match classify_command(part) {
                     Classification::Supported {
-                        rtk_equivalent,
+                        cz_equivalent,
                         category,
                         estimated_savings_pct,
                         status,
                     } => {
-                        let bucket = supported_map.entry(rtk_equivalent).or_insert_with(|| {
+                        let bucket = supported_map.entry(cz_equivalent).or_insert_with(|| {
                             SupportedBucket {
-                                rtk_equivalent,
+                                cz_equivalent,
                                 category,
                                 count: 0,
                                 total_output_tokens: 0,
@@ -158,7 +158,7 @@ pub fn run(
                     Classification::Ignored => {
                         // Check if it starts with "contextzip "
                         if part.trim().starts_with("contextzip ") {
-                            already_rtk += 1;
+                            already_contextzip += 1;
                         }
                         // Otherwise just skip
                     }
@@ -182,25 +182,25 @@ pub fn run(
                         let cmd = name[..colon_pos].to_string();
                         let status_str = &name[colon_pos + 1..];
                         let status = match status_str {
-                            "Passthrough" => report::RtkStatus::Passthrough,
-                            "NotSupported" => report::RtkStatus::NotSupported,
-                            _ => report::RtkStatus::Existing,
+                            "Passthrough" => report::CzStatus::Passthrough,
+                            "NotSupported" => report::CzStatus::NotSupported,
+                            _ => report::CzStatus::Existing,
                         };
                         (cmd, status)
                     } else {
-                        (name, report::RtkStatus::Existing)
+                        (name, report::CzStatus::Existing)
                     }
                 })
-                .unwrap_or_else(|| (String::new(), report::RtkStatus::Existing));
+                .unwrap_or_else(|| (String::new(), report::CzStatus::Existing));
 
             SupportedEntry {
                 command: command_with_status,
                 count: bucket.count,
-                rtk_equivalent: bucket.rtk_equivalent,
+                cz_equivalent: bucket.cz_equivalent,
                 category: bucket.category,
                 estimated_savings_tokens: bucket.total_output_tokens,
                 estimated_savings_pct: bucket.savings_pct,
-                rtk_status: status,
+                cz_status: status,
             }
         })
         .collect();
@@ -221,8 +221,8 @@ pub fn run(
     unsupported.sort_by(|a, b| b.count.cmp(&a.count));
 
     // Build CONTEXTZIP_DISABLED examples sorted by frequency (top 5)
-    let rtk_disabled_examples: Vec<String> = {
-        let mut sorted: Vec<_> = rtk_disabled_cmds.into_iter().collect();
+    let disabled_examples: Vec<String> = {
+        let mut sorted: Vec<_> = disabled_cmds.into_iter().collect();
         sorted.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
         sorted
             .into_iter()
@@ -234,13 +234,13 @@ pub fn run(
     let report = DiscoverReport {
         sessions_scanned: sessions.len(),
         total_commands,
-        already_rtk,
+        already_contextzip,
         since_days,
         supported,
         unsupported,
         parse_errors,
-        rtk_disabled_count,
-        rtk_disabled_examples,
+        disabled_count,
+        disabled_examples,
     };
 
     match format {

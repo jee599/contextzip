@@ -76,31 +76,31 @@ pub fn run_stdout(url: &str, args: &[String], verbose: u8) -> Result<()> {
         let total = lines.len();
         let raw_output = content.to_string();
 
-        let mut rtk_output = String::new();
+        let mut compressed = String::new();
         if total > 20 {
-            rtk_output.push_str(&format!(
+            compressed.push_str(&format!(
                 "{} ok | {} lines | {}\n",
                 compact_url(url),
                 total,
                 format_size(output.stdout.len() as u64)
             ));
-            rtk_output.push_str("--- first 10 lines ---\n");
+            compressed.push_str("--- first 10 lines ---\n");
             for line in lines.iter().take(10) {
-                rtk_output.push_str(&format!("{}\n", truncate_line(line, 100)));
+                compressed.push_str(&format!("{}\n", truncate_line(line, 100)));
             }
-            rtk_output.push_str(&format!("... +{} more lines", total - 10));
+            compressed.push_str(&format!("... +{} more lines", total - 10));
         } else {
-            rtk_output.push_str(&format!("{} ok | {} lines\n", compact_url(url), total));
+            compressed.push_str(&format!("{} ok | {} lines\n", compact_url(url), total));
             for line in &lines {
-                rtk_output.push_str(&format!("{}\n", line));
+                compressed.push_str(&format!("{}\n", line));
             }
         }
-        print!("{}", rtk_output);
+        print!("{}", compressed);
         timer.track(
             &format!("wget -O - {}", url),
             "contextzip wget -o",
             &raw_output,
-            &rtk_output,
+            &compressed,
         );
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);

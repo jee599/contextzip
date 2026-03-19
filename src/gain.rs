@@ -171,7 +171,7 @@ pub fn run(
         }
 
         // Lightweight CONTEXTZIP_DISABLED bypass check (best-effort, silent on failure)
-        if let Some(warning) = check_rtk_disabled_bypass() {
+        if let Some(warning) = check_disabled_bypass() {
             eprintln!("{}", warning.yellow());
             eprintln!();
         }
@@ -696,9 +696,9 @@ fn export_csv(
 /// Lightweight scan of recent Claude Code sessions for CONTEXTZIP_DISABLED= overuse.
 /// Returns a warning string if bypass rate exceeds 10%, None otherwise.
 /// Silently returns None on any error (missing dirs, permission issues, etc.).
-fn check_rtk_disabled_bypass() -> Option<String> {
+fn check_disabled_bypass() -> Option<String> {
     use crate::discover::provider::{ClaudeProvider, SessionProvider};
-    use crate::discover::registry::has_rtk_disabled_prefix;
+    use crate::discover::registry::has_disabled_prefix;
 
     let provider = ClaudeProvider;
 
@@ -721,7 +721,7 @@ fn check_rtk_disabled_bypass() -> Option<String> {
 
         for ext_cmd in &extracted {
             total_bash += 1;
-            if has_rtk_disabled_prefix(&ext_cmd.command) {
+            if has_disabled_prefix(&ext_cmd.command) {
                 bypassed += 1;
             }
         }

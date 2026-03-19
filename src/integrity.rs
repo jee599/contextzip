@@ -263,10 +263,10 @@ pub fn runtime_check() -> Result<()> {
             );
             eprintln!();
             eprintln!("  The hook at ~/.claude/hooks/contextzip-rewrite.sh has been modified.");
-            eprintln!("  This may indicate tampering. RTK will not execute.");
+            eprintln!("  This may indicate tampering. ContextZip will not execute.");
             eprintln!();
             eprintln!("  To restore:  contextzip init -g --auto-patch");
-            eprintln!("  To inspect:  rtk verify");
+            eprintln!("  To inspect:  contextzip verify");
             std::process::exit(1);
         }
         IntegrityStatus::OrphanedHash => {

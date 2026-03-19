@@ -7,10 +7,10 @@ use super::rules::{IGNORED_EXACT, IGNORED_PREFIXES, PATTERNS, RULES};
 #[derive(Debug, PartialEq)]
 pub enum Classification {
     Supported {
-        rtk_equivalent: &'static str,
+        cz_equivalent: &'static str,
         category: &'static str,
         estimated_savings_pct: f64,
-        status: super::report::RtkStatus,
+        status: super::report::CzStatus,
     },
     Unsupported {
         base_command: String,
@@ -121,7 +121,7 @@ pub fn classify_command(cmd: &str) -> Classification {
                     .iter()
                     .find(|(s, _)| *s == subcmd)
                     .map(|(_, st)| *st)
-                    .unwrap_or(super::report::RtkStatus::Existing);
+                    .unwrap_or(super::report::CzStatus::Existing);
 
                 // Check if this subcommand has custom savings
                 let savings = rule
@@ -133,14 +133,14 @@ pub fn classify_command(cmd: &str) -> Classification {
 
                 (savings, status)
             } else {
-                (rule.savings_pct, super::report::RtkStatus::Existing)
+                (rule.savings_pct, super::report::CzStatus::Existing)
             }
         } else {
-            (rule.savings_pct, super::report::RtkStatus::Existing)
+            (rule.savings_pct, super::report::CzStatus::Existing)
         };
 
         Classification::Supported {
-            rtk_equivalent: rule.rtk_cmd,
+            cz_equivalent: rule.cz_cmd,
             category: rule.category,
             estimated_savings_pct: savings,
             status,
@@ -309,7 +309,7 @@ fn strip_absolute_path(cmd: &str) -> String {
 }
 
 /// Check if a command has CONTEXTZIP_DISABLED= prefix in its env prefix portion.
-pub fn has_rtk_disabled_prefix(cmd: &str) -> bool {
+pub fn has_disabled_prefix(cmd: &str) -> bool {
     let trimmed = cmd.trim();
     let stripped = ENV_PREFIX.replace(trimmed, "");
     let prefix_len = trimmed.len() - stripped.len();
@@ -401,7 +401,7 @@ fn rewrite_compound(cmd: &str, excluded: &[String]) -> Option<String> {
                 } else {
                     // `|` pipe — rewrite first segment only, pass through the rest unchanged
                     let seg = cmd[seg_start..i].trim();
-                    // Skip rewriting `find`/`fd` in pipes — rtk find outputs a grouped
+                    // Skip rewriting `find`/`fd` in pipes — contextzip find outputs a grouped
                     // format that is incompatible with pipe consumers like xargs, grep,
                     // wc, sort, etc. which expect one path per line (#439).
                     let is_pipe_incompatible = seg.starts_with("find ")
@@ -585,20 +585,20 @@ fn rewrite_segment(seg: &str, excluded: &[String]) -> Option<String> {
     }
 
     // Use classify_command for correct ignore/prefix handling
-    let rtk_equivalent = match classify_command(trimmed) {
-        Classification::Supported { rtk_equivalent, .. } => {
+    let cz_equivalent = match classify_command(trimmed) {
+        Classification::Supported { cz_equivalent, .. } => {
             // Check if the base command is excluded from rewriting (#243)
             let base = trimmed.split_whitespace().next().unwrap_or("");
             if excluded.iter().any(|e| e == base) {
                 return None;
             }
-            rtk_equivalent
+            cz_equivalent
         }
         _ => return None,
     };
 
-    // Find the matching rule (rtk_cmd values are unique across all rules)
-    let rule = RULES.iter().find(|r| r.rtk_cmd == rtk_equivalent)?;
+    // Find the matching rule (cz_cmd values are unique across all rules)
+    let rule = RULES.iter().find(|r| r.cz_cmd == cz_equivalent)?;
 
     // Extract env prefix (sudo, env VAR=val, etc.)
     let stripped_cow = ENV_PREFIX.replace(trimmed, "");
@@ -607,13 +607,13 @@ fn rewrite_segment(seg: &str, excluded: &[String]) -> Option<String> {
     let cmd_clean = stripped_cow.trim();
 
     // #345: CONTEXTZIP_DISABLED=1 in env prefix → skip rewrite entirely
-    if has_rtk_disabled_prefix(trimmed) {
+    if has_disabled_prefix(trimmed) {
         return None;
     }
 
     // #196: gh with --json/--jq/--template produces structured output that
-    // rtk gh would corrupt — skip rewrite so the caller gets raw JSON.
-    if rule.rtk_cmd == "contextzip gh" {
+    // contextzip gh would corrupt — skip rewrite so the caller gets raw JSON.
+    if rule.cz_cmd == "contextzip gh" {
         let args_lower = cmd_clean.to_lowercase();
         if args_lower.contains("--json")
             || args_lower.contains("--jq")
@@ -627,9 +627,9 @@ fn rewrite_segment(seg: &str, excluded: &[String]) -> Option<String> {
     for &prefix in rule.rewrite_prefixes {
         if let Some(rest) = strip_word_prefix(cmd_clean, prefix) {
             let rewritten = if rest.is_empty() {
-                format!("{}{}", env_prefix, rule.rtk_cmd)
+                format!("{}{}", env_prefix, rule.cz_cmd)
             } else {
-                format!("{}{} {}", env_prefix, rule.rtk_cmd, rest)
+                format!("{}{} {}", env_prefix, rule.cz_cmd, rest)
             };
             return Some(rewritten);
         }
@@ -655,7 +655,7 @@ fn strip_word_prefix<'a>(cmd: &'a str, prefix: &str) -> Option<&'a str> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::report::RtkStatus;
+    use super::super::report::CzStatus;
     use super::*;
 
     #[test]
@@ -663,10 +663,10 @@ mod tests {
         assert_eq!(
             classify_command("git status"),
             Classification::Supported {
-                rtk_equivalent: "contextzip git",
+                cz_equivalent: "contextzip git",
                 category: "Git",
                 estimated_savings_pct: 70.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -676,10 +676,10 @@ mod tests {
         assert_eq!(
             classify_command("git diff --cached"),
             Classification::Supported {
-                rtk_equivalent: "contextzip git",
+                cz_equivalent: "contextzip git",
                 category: "Git",
                 estimated_savings_pct: 80.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -689,10 +689,10 @@ mod tests {
         assert_eq!(
             classify_command("cargo test filter::"),
             Classification::Supported {
-                rtk_equivalent: "contextzip cargo",
+                cz_equivalent: "contextzip cargo",
                 category: "Cargo",
                 estimated_savings_pct: 90.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -702,10 +702,10 @@ mod tests {
         assert_eq!(
             classify_command("npx tsc --noEmit"),
             Classification::Supported {
-                rtk_equivalent: "contextzip tsc",
+                cz_equivalent: "contextzip tsc",
                 category: "Build",
                 estimated_savings_pct: 83.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -715,10 +715,10 @@ mod tests {
         assert_eq!(
             classify_command("cat src/main.rs"),
             Classification::Supported {
-                rtk_equivalent: "contextzip read",
+                cz_equivalent: "contextzip read",
                 category: "Files",
                 estimated_savings_pct: 60.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -778,10 +778,10 @@ mod tests {
         assert_eq!(
             classify_command("GIT_SSH_COMMAND=ssh git push"),
             Classification::Supported {
-                rtk_equivalent: "contextzip git",
+                cz_equivalent: "contextzip git",
                 category: "Git",
                 estimated_savings_pct: 70.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -791,10 +791,10 @@ mod tests {
         assert_eq!(
             classify_command("sudo docker ps"),
             Classification::Supported {
-                rtk_equivalent: "contextzip docker",
+                cz_equivalent: "contextzip docker",
                 category: "Infra",
                 estimated_savings_pct: 85.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -804,10 +804,10 @@ mod tests {
         assert_eq!(
             classify_command("cargo check"),
             Classification::Supported {
-                rtk_equivalent: "contextzip cargo",
+                cz_equivalent: "contextzip cargo",
                 category: "Cargo",
                 estimated_savings_pct: 80.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -817,10 +817,10 @@ mod tests {
         assert_eq!(
             classify_command("cargo check --all-targets"),
             Classification::Supported {
-                rtk_equivalent: "contextzip cargo",
+                cz_equivalent: "contextzip cargo",
                 category: "Cargo",
                 estimated_savings_pct: 80.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -830,10 +830,10 @@ mod tests {
         assert_eq!(
             classify_command("cargo fmt"),
             Classification::Supported {
-                rtk_equivalent: "contextzip cargo",
+                cz_equivalent: "contextzip cargo",
                 category: "Cargo",
                 estimated_savings_pct: 80.0,
-                status: RtkStatus::Passthrough,
+                status: CzStatus::Passthrough,
             }
         );
     }
@@ -843,10 +843,10 @@ mod tests {
         assert_eq!(
             classify_command("cargo clippy --all-targets"),
             Classification::Supported {
-                rtk_equivalent: "contextzip cargo",
+                cz_equivalent: "contextzip cargo",
                 category: "Cargo",
                 estimated_savings_pct: 80.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -895,10 +895,10 @@ mod tests {
         assert_eq!(
             classify_command("find . -name foo"),
             Classification::Supported {
-                rtk_equivalent: "contextzip find",
+                cz_equivalent: "contextzip find",
                 category: "Files",
                 estimated_savings_pct: 70.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -954,10 +954,10 @@ mod tests {
         assert_eq!(
             classify_command("mypy src/"),
             Classification::Supported {
-                rtk_equivalent: "contextzip mypy",
+                cz_equivalent: "contextzip mypy",
                 category: "Build",
                 estimated_savings_pct: 80.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -967,10 +967,10 @@ mod tests {
         assert_eq!(
             classify_command("python3 -m mypy --strict"),
             Classification::Supported {
-                rtk_equivalent: "contextzip mypy",
+                cz_equivalent: "contextzip mypy",
                 category: "Build",
                 estimated_savings_pct: 80.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -1026,7 +1026,7 @@ mod tests {
             matches!(
                 result,
                 Classification::Supported {
-                    rtk_equivalent: "contextzip git",
+                    cz_equivalent: "contextzip git",
                     ..
                 }
             ),
@@ -1172,7 +1172,7 @@ mod tests {
 
     #[test]
     fn test_rewrite_find_pipe_skipped() {
-        // find in a pipe should NOT be rewritten — rtk find output format
+        // find in a pipe should NOT be rewritten — contextzip find output format
         // is incompatible with pipe consumers like xargs (#439)
         assert_eq!(
             rewrite_command("find . -name '*.rs' | xargs grep 'fn run'", &[]),
@@ -1301,7 +1301,7 @@ mod tests {
 
     #[test]
     fn test_rewrite_head_numeric_flag() {
-        // head -20 file → rtk read file --max-lines 20 (not rtk read -20 file)
+        // head -20 file → contextzip read file --max-lines 20 (not contextzip read -20 file)
         assert_eq!(
             rewrite_command("head -20 src/main.rs", &[]),
             Some("contextzip read src/main.rs --max-lines 20".into())
@@ -1380,7 +1380,7 @@ mod tests {
         assert!(matches!(
             classify_command("gh release list"),
             Classification::Supported {
-                rtk_equivalent: "contextzip gh",
+                cz_equivalent: "contextzip gh",
                 ..
             }
         ));
@@ -1391,7 +1391,7 @@ mod tests {
         assert!(matches!(
             classify_command("cargo install rtk"),
             Classification::Supported {
-                rtk_equivalent: "contextzip cargo",
+                cz_equivalent: "contextzip cargo",
                 ..
             }
         ));
@@ -1402,7 +1402,7 @@ mod tests {
         assert!(matches!(
             classify_command("docker run --rm ubuntu bash"),
             Classification::Supported {
-                rtk_equivalent: "contextzip docker",
+                cz_equivalent: "contextzip docker",
                 ..
             }
         ));
@@ -1413,7 +1413,7 @@ mod tests {
         assert!(matches!(
             classify_command("docker exec -it mycontainer bash"),
             Classification::Supported {
-                rtk_equivalent: "contextzip docker",
+                cz_equivalent: "contextzip docker",
                 ..
             }
         ));
@@ -1424,7 +1424,7 @@ mod tests {
         assert!(matches!(
             classify_command("docker build -t myimage ."),
             Classification::Supported {
-                rtk_equivalent: "contextzip docker",
+                cz_equivalent: "contextzip docker",
                 ..
             }
         ));
@@ -1435,7 +1435,7 @@ mod tests {
         assert!(matches!(
             classify_command("kubectl describe pod mypod"),
             Classification::Supported {
-                rtk_equivalent: "contextzip kubectl",
+                cz_equivalent: "contextzip kubectl",
                 ..
             }
         ));
@@ -1446,7 +1446,7 @@ mod tests {
         assert!(matches!(
             classify_command("kubectl apply -f deploy.yaml"),
             Classification::Supported {
-                rtk_equivalent: "contextzip kubectl",
+                cz_equivalent: "contextzip kubectl",
                 ..
             }
         ));
@@ -1457,7 +1457,7 @@ mod tests {
         assert!(matches!(
             classify_command("tree src/"),
             Classification::Supported {
-                rtk_equivalent: "contextzip tree",
+                cz_equivalent: "contextzip tree",
                 ..
             }
         ));
@@ -1468,7 +1468,7 @@ mod tests {
         assert!(matches!(
             classify_command("diff file1.txt file2.txt"),
             Classification::Supported {
-                rtk_equivalent: "contextzip diff",
+                cz_equivalent: "contextzip diff",
                 ..
             }
         ));
@@ -1573,7 +1573,7 @@ mod tests {
         assert!(matches!(
             classify_command("aws s3 ls"),
             Classification::Supported {
-                rtk_equivalent: "contextzip aws",
+                cz_equivalent: "contextzip aws",
                 ..
             }
         ));
@@ -1584,7 +1584,7 @@ mod tests {
         assert!(matches!(
             classify_command("aws ec2 describe-instances"),
             Classification::Supported {
-                rtk_equivalent: "contextzip aws",
+                cz_equivalent: "contextzip aws",
                 ..
             }
         ));
@@ -1595,7 +1595,7 @@ mod tests {
         assert!(matches!(
             classify_command("psql -U postgres"),
             Classification::Supported {
-                rtk_equivalent: "contextzip psql",
+                cz_equivalent: "contextzip psql",
                 ..
             }
         ));
@@ -1606,7 +1606,7 @@ mod tests {
         assert!(matches!(
             classify_command("psql postgres://localhost/mydb"),
             Classification::Supported {
-                rtk_equivalent: "contextzip psql",
+                cz_equivalent: "contextzip psql",
                 ..
             }
         ));
@@ -1643,7 +1643,7 @@ mod tests {
         assert!(matches!(
             classify_command("ruff check ."),
             Classification::Supported {
-                rtk_equivalent: "contextzip ruff",
+                cz_equivalent: "contextzip ruff",
                 ..
             }
         ));
@@ -1654,7 +1654,7 @@ mod tests {
         assert!(matches!(
             classify_command("ruff format src/"),
             Classification::Supported {
-                rtk_equivalent: "contextzip ruff",
+                cz_equivalent: "contextzip ruff",
                 ..
             }
         ));
@@ -1665,7 +1665,7 @@ mod tests {
         assert!(matches!(
             classify_command("pytest tests/"),
             Classification::Supported {
-                rtk_equivalent: "contextzip pytest",
+                cz_equivalent: "contextzip pytest",
                 ..
             }
         ));
@@ -1676,7 +1676,7 @@ mod tests {
         assert!(matches!(
             classify_command("python -m pytest tests/"),
             Classification::Supported {
-                rtk_equivalent: "contextzip pytest",
+                cz_equivalent: "contextzip pytest",
                 ..
             }
         ));
@@ -1687,7 +1687,7 @@ mod tests {
         assert!(matches!(
             classify_command("pip list"),
             Classification::Supported {
-                rtk_equivalent: "contextzip pip",
+                cz_equivalent: "contextzip pip",
                 ..
             }
         ));
@@ -1698,7 +1698,7 @@ mod tests {
         assert!(matches!(
             classify_command("uv pip list"),
             Classification::Supported {
-                rtk_equivalent: "contextzip pip",
+                cz_equivalent: "contextzip pip",
                 ..
             }
         ));
@@ -1767,7 +1767,7 @@ mod tests {
         assert!(matches!(
             classify_command("go test ./..."),
             Classification::Supported {
-                rtk_equivalent: "contextzip go",
+                cz_equivalent: "contextzip go",
                 ..
             }
         ));
@@ -1778,7 +1778,7 @@ mod tests {
         assert!(matches!(
             classify_command("go build ./..."),
             Classification::Supported {
-                rtk_equivalent: "contextzip go",
+                cz_equivalent: "contextzip go",
                 ..
             }
         ));
@@ -1789,7 +1789,7 @@ mod tests {
         assert!(matches!(
             classify_command("go vet ./..."),
             Classification::Supported {
-                rtk_equivalent: "contextzip go",
+                cz_equivalent: "contextzip go",
                 ..
             }
         ));
@@ -1800,7 +1800,7 @@ mod tests {
         assert!(matches!(
             classify_command("golangci-lint run"),
             Classification::Supported {
-                rtk_equivalent: "contextzip golangci-lint",
+                cz_equivalent: "contextzip golangci-lint",
                 ..
             }
         ));
@@ -1845,7 +1845,7 @@ mod tests {
         assert!(matches!(
             classify_command("vitest run"),
             Classification::Supported {
-                rtk_equivalent: "contextzip vitest",
+                cz_equivalent: "contextzip vitest",
                 ..
             }
         ));
@@ -1872,7 +1872,7 @@ mod tests {
         assert!(matches!(
             classify_command("npx prisma migrate dev"),
             Classification::Supported {
-                rtk_equivalent: "contextzip prisma",
+                cz_equivalent: "contextzip prisma",
                 ..
             }
         ));
@@ -2009,21 +2009,21 @@ mod tests {
         );
     }
 
-    // --- All RULES have non-empty rtk_cmd and at least one rewrite_prefix ---
+    // --- All RULES have non-empty cz_cmd and at least one rewrite_prefix ---
 
     #[test]
-    fn test_all_rules_have_valid_rtk_cmd() {
+    fn test_all_rules_have_valid_cz_cmd() {
         for rule in RULES {
-            assert!(!rule.rtk_cmd.is_empty(), "Rule with empty rtk_cmd found");
+            assert!(!rule.cz_cmd.is_empty(), "Rule with empty cz_cmd found");
             assert!(
-                rule.rtk_cmd.starts_with("contextzip "),
-                "rtk_cmd '{}' must start with 'contextzip '",
-                rule.rtk_cmd
+                rule.cz_cmd.starts_with("contextzip "),
+                "cz_cmd '{}' must start with 'contextzip '",
+                rule.cz_cmd
             );
             assert!(
                 !rule.rewrite_prefixes.is_empty(),
                 "Rule '{}' has no rewrite_prefixes",
-                rule.rtk_cmd
+                rule.cz_cmd
             );
         }
     }
@@ -2119,17 +2119,17 @@ mod tests {
     // --- #508: CONTEXTZIP_DISABLED detection helpers ---
 
     #[test]
-    fn test_has_rtk_disabled_prefix() {
-        assert!(has_rtk_disabled_prefix("CONTEXTZIP_DISABLED=1 git status"));
-        assert!(has_rtk_disabled_prefix(
+    fn test_has_disabled_prefix() {
+        assert!(has_disabled_prefix("CONTEXTZIP_DISABLED=1 git status"));
+        assert!(has_disabled_prefix(
             "FOO=1 CONTEXTZIP_DISABLED=1 cargo test"
         ));
-        assert!(has_rtk_disabled_prefix(
+        assert!(has_disabled_prefix(
             "CONTEXTZIP_DISABLED=true git log --oneline"
         ));
-        assert!(!has_rtk_disabled_prefix("git status"));
-        assert!(!has_rtk_disabled_prefix("contextzip git status"));
-        assert!(!has_rtk_disabled_prefix("SOME_VAR=1 git status"));
+        assert!(!has_disabled_prefix("git status"));
+        assert!(!has_disabled_prefix("contextzip git status"));
+        assert!(!has_disabled_prefix("SOME_VAR=1 git status"));
     }
 
     #[test]
@@ -2152,10 +2152,10 @@ mod tests {
         assert_eq!(
             classify_command("/usr/bin/grep -rni pattern"),
             Classification::Supported {
-                rtk_equivalent: "contextzip grep",
+                cz_equivalent: "contextzip grep",
                 category: "Files",
                 estimated_savings_pct: 75.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -2165,10 +2165,10 @@ mod tests {
         assert_eq!(
             classify_command("/bin/ls -la"),
             Classification::Supported {
-                rtk_equivalent: "contextzip ls",
+                cz_equivalent: "contextzip ls",
                 category: "Files",
                 estimated_savings_pct: 65.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -2178,10 +2178,10 @@ mod tests {
         assert_eq!(
             classify_command("/usr/local/bin/git status"),
             Classification::Supported {
-                rtk_equivalent: "contextzip git",
+                cz_equivalent: "contextzip git",
                 category: "Git",
                 estimated_savings_pct: 70.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -2192,10 +2192,10 @@ mod tests {
         assert_eq!(
             classify_command("/usr/bin/find ."),
             Classification::Supported {
-                rtk_equivalent: "contextzip find",
+                cz_equivalent: "contextzip find",
                 category: "Files",
                 estimated_savings_pct: 70.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -2215,10 +2215,10 @@ mod tests {
         assert_eq!(
             classify_command("git -C /tmp status"),
             Classification::Supported {
-                rtk_equivalent: "contextzip git",
+                cz_equivalent: "contextzip git",
                 category: "Git",
                 estimated_savings_pct: 70.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -2228,10 +2228,10 @@ mod tests {
         assert_eq!(
             classify_command("git --no-pager log -5"),
             Classification::Supported {
-                rtk_equivalent: "contextzip git",
+                cz_equivalent: "contextzip git",
                 category: "Git",
                 estimated_savings_pct: 70.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }
@@ -2241,10 +2241,10 @@ mod tests {
         assert_eq!(
             classify_command("git --git-dir /tmp/.git status"),
             Classification::Supported {
-                rtk_equivalent: "contextzip git",
+                cz_equivalent: "contextzip git",
                 category: "Git",
                 estimated_savings_pct: 70.0,
-                status: RtkStatus::Existing,
+                status: CzStatus::Existing,
             }
         );
     }

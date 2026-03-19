@@ -30,19 +30,19 @@ pub fn run_err(command: &str, verbose: u8) -> Result<()> {
     let stderr = String::from_utf8_lossy(&output.stderr);
     let raw = crate::ansi_filter::filter_ansi(&format!("{}\n{}", stdout, stderr));
     let filtered = filter_errors(&raw);
-    let mut rtk = String::new();
+    let mut summary = String::new();
 
     if filtered.is_empty() {
         if output.status.success() {
-            rtk.push_str("[ok] Command completed successfully (no errors)");
+            summary.push_str("[ok] Command completed successfully (no errors)");
         } else {
-            rtk.push_str(&format!(
+            summary.push_str(&format!(
                 "[FAIL] Command failed (exit code: {:?})\n",
                 output.status.code()
             ));
             let lines: Vec<&str> = raw.lines().collect();
             for line in lines.iter().rev().take(10).rev() {
-                rtk.push_str(&format!("  {}\n", line));
+                summary.push_str(&format!("  {}\n", line));
             }
         }
     } else {
@@ -52,7 +52,7 @@ pub fn run_err(command: &str, verbose: u8) -> Result<()> {
         let compressed = crate::build_cmd::group_build_errors(&compressed);
         // Post-process: compress Docker build logs
         let compressed = crate::docker_cmd::compress_docker_log(&compressed);
-        rtk.push_str(&compressed);
+        summary.push_str(&compressed);
     }
 
     let exit_code = output
@@ -60,11 +60,11 @@ pub fn run_err(command: &str, verbose: u8) -> Result<()> {
         .code()
         .unwrap_or(if output.status.success() { 0 } else { 1 });
     if let Some(hint) = crate::tee::tee_and_hint(&raw, "err", exit_code) {
-        println!("{}\n{}", rtk, hint);
+        println!("{}\n{}", summary, hint);
     } else {
-        println!("{}", rtk);
+        println!("{}", summary);
     }
-    timer.track(command, "contextzip run-err", &raw, &rtk);
+    timer.track(command, "contextzip run-err", &raw, &summary);
     Ok(())
 }
 

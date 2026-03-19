@@ -43,7 +43,7 @@ fn get_tee_dir(config: &Config) -> Option<PathBuf> {
         return Some(dir.clone());
     }
 
-    // Default: ~/.local/share/rtk/tee/
+    // Default: ~/.local/share/contextzip/tee/
     dirs::data_local_dir().map(|d| d.join("contextzip").join("tee"))
 }
 

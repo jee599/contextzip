@@ -1,22 +1,22 @@
 use serde::Serialize;
 
-/// RTK support status for a command.
+/// ContextZip support status for a command.
 #[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq)]
-pub enum RtkStatus {
+pub enum CzStatus {
     /// Dedicated handler with filtering (e.g., git status → git.rs:run_status())
     Existing,
     /// Works via external_subcommand passthrough, no filtering (e.g., cargo fmt → Other)
     Passthrough,
-    /// RTK doesn't handle this command at all
+    /// ContextZip doesn't handle this command at all
     NotSupported,
 }
 
-impl RtkStatus {
+impl CzStatus {
     pub fn as_str(&self) -> &'static str {
         match self {
-            RtkStatus::Existing => "existing",
-            RtkStatus::Passthrough => "passthrough",
-            RtkStatus::NotSupported => "not-supported",
+            CzStatus::Existing => "existing",
+            CzStatus::Passthrough => "passthrough",
+            CzStatus::NotSupported => "not-supported",
         }
     }
 }
@@ -26,14 +26,14 @@ impl RtkStatus {
 pub struct SupportedEntry {
     pub command: String,
     pub count: usize,
-    pub rtk_equivalent: &'static str,
+    pub cz_equivalent: &'static str,
     pub category: &'static str,
     pub estimated_savings_tokens: usize,
     pub estimated_savings_pct: f64,
-    pub rtk_status: RtkStatus,
+    pub cz_status: CzStatus,
 }
 
-/// An unsupported command not yet handled by RTK.
+/// An unsupported command not yet handled by ContextZip.
 #[derive(Debug, Serialize)]
 pub struct UnsupportedEntry {
     pub base_command: String,
@@ -46,13 +46,13 @@ pub struct UnsupportedEntry {
 pub struct DiscoverReport {
     pub sessions_scanned: usize,
     pub total_commands: usize,
-    pub already_rtk: usize,
+    pub already_contextzip: usize,
     pub since_days: u64,
     pub supported: Vec<SupportedEntry>,
     pub unsupported: Vec<UnsupportedEntry>,
     pub parse_errors: usize,
-    pub rtk_disabled_count: usize,
-    pub rtk_disabled_examples: Vec<String>,
+    pub disabled_count: usize,
+    pub disabled_examples: Vec<String>,
 }
 
 impl DiscoverReport {
@@ -81,9 +81,9 @@ pub fn format_text(report: &DiscoverReport, limit: usize, verbose: bool) -> Stri
     ));
     out.push_str(&format!(
         "Already using ContextZip: {} commands ({}%)\n",
-        report.already_rtk,
+        report.already_contextzip,
         if report.total_commands > 0 {
-            report.already_rtk * 100 / report.total_commands
+            report.already_contextzip * 100 / report.total_commands
         } else {
             0
         }
@@ -109,8 +109,8 @@ pub fn format_text(report: &DiscoverReport, limit: usize, verbose: bool) -> Stri
                 "{:<24} {:>5}    {:<18} {:<13} ~{}\n",
                 truncate_str(&entry.command, 23),
                 entry.count,
-                entry.rtk_equivalent,
-                entry.rtk_status.as_str(),
+                entry.cz_equivalent,
+                entry.cz_status.as_str(),
                 format_tokens(entry.estimated_savings_tokens),
             ));
         }
@@ -149,16 +149,16 @@ pub fn format_text(report: &DiscoverReport, limit: usize, verbose: bool) -> Stri
     }
 
     // CONTEXTZIP_DISABLED bypass warning
-    if report.rtk_disabled_count > 0 {
+    if report.disabled_count > 0 {
         out.push_str(&format!(
             "\nCONTEXTZIP_DISABLED BYPASS -- {} commands ran without filtering\n",
-            report.rtk_disabled_count
+            report.disabled_count
         ));
         out.push_str(&"-".repeat(72));
         out.push('\n');
         out.push_str("These commands used CONTEXTZIP_DISABLED=1 unnecessarily:\n");
-        if !report.rtk_disabled_examples.is_empty() {
-            out.push_str(&format!("  {}\n", report.rtk_disabled_examples.join(", ")));
+        if !report.disabled_examples.is_empty() {
+            out.push_str(&format!("  {}\n", report.disabled_examples.join(", ")));
         }
         out.push_str("-> Remove CONTEXTZIP_DISABLED=1 to recover token savings\n");
     }

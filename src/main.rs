@@ -1128,7 +1128,7 @@ fn run_fallback(parse_error: clap::Error) -> Result<()> {
             Err(e) => {
                 // Command not found — same behaviour as no-TOML path
                 tracking::record_parse_failure_silent(&raw_command, &error_message, false);
-                eprintln!("[rtk: {}]", e);
+                eprintln!("[contextzip: {}]", e);
                 std::process::exit(127);
             }
         }
@@ -1157,7 +1157,7 @@ fn run_fallback(parse_error: clap::Error) -> Result<()> {
             Err(e) => {
                 tracking::record_parse_failure_silent(&raw_command, &error_message, false);
                 // Command not found or other OS error — single message, no duplicate Clap error
-                eprintln!("[rtk: {}]", e);
+                eprintln!("[contextzip: {}]", e);
                 std::process::exit(127);
             }
         }
@@ -2060,8 +2060,8 @@ fn main() -> Result<()> {
             let timer = tracking::TimedExecution::start();
 
             // If a single quoted arg contains spaces, split it respecting quotes (#388).
-            // e.g. rtk proxy 'head -50 file.php' → cmd=head, args=["-50", "file.php"]
-            // e.g. rtk proxy 'git log --format="%H %s"' → cmd=git, args=["log", "--format=%H %s"]
+            // e.g. contextzip proxy 'head -50 file.php' → cmd=head, args=["-50", "file.php"]
+            // e.g. contextzip proxy 'git log --format="%H %s"' → cmd=git, args=["log", "--format=%H %s"]
             let (cmd_name, cmd_args): (String, Vec<String>) = if args.len() == 1 {
                 let full = args[0].to_string_lossy();
                 let parts = shell_split(&full);

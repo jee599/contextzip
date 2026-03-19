@@ -104,8 +104,8 @@ pub fn run(
         by_file.entry(file).or_default().push((line_num, cleaned));
     }
 
-    let mut rtk_output = String::new();
-    rtk_output.push_str(&format!("{} matches in {}F:\n\n", total, by_file.len()));
+    let mut compressed = String::new();
+    compressed.push_str(&format!("{} matches in {}F:\n\n", total, by_file.len()));
 
     let mut shown = 0;
     let mut files: Vec<_> = by_file.iter().collect();
@@ -117,11 +117,11 @@ pub fn run(
         }
 
         let file_display = compact_path(file);
-        rtk_output.push_str(&format!("[file] {} ({}):\n", file_display, matches.len()));
+        compressed.push_str(&format!("[file] {} ({}):\n", file_display, matches.len()));
 
         let per_file = config::limits().grep_max_per_file;
         for (line_num, content) in matches.iter().take(per_file) {
-            rtk_output.push_str(&format!("  {:>4}: {}\n", line_num, content));
+            compressed.push_str(&format!("  {:>4}: {}\n", line_num, content));
             shown += 1;
             if shown >= max_results {
                 break;
@@ -129,21 +129,21 @@ pub fn run(
         }
 
         if matches.len() > per_file {
-            rtk_output.push_str(&format!("  +{}\n", matches.len() - per_file));
+            compressed.push_str(&format!("  +{}\n", matches.len() - per_file));
         }
-        rtk_output.push('\n');
+        compressed.push('\n');
     }
 
     if total > shown {
-        rtk_output.push_str(&format!("... +{}\n", total - shown));
+        compressed.push_str(&format!("... +{}\n", total - shown));
     }
 
-    print!("{}", rtk_output);
+    print!("{}", compressed);
     timer.track(
         &format!("grep -rn '{}' {}", pattern, path),
         "contextzip grep",
         &raw_output,
-        &rtk_output,
+        &compressed,
     );
 
     if exit_code != 0 {

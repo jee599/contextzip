@@ -2,14 +2,14 @@ use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-/// Default log file location (aligned with hook's $HOME/.local/share/rtk/).
+/// Default log file location (aligned with hook's $HOME/.local/share/contextzip/).
 fn default_log_path() -> PathBuf {
     if let Ok(dir) = std::env::var("CONTEXTZIP_AUDIT_DIR") {
         PathBuf::from(dir).join("hook-audit.log")
     } else {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
         PathBuf::from(home)
-            .join(".local/share/rtk")
+            .join(".local/share/contextzip")
             .join("hook-audit.log")
     }
 }

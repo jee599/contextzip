@@ -664,7 +664,7 @@ mod tests {
 
     #[test]
     fn test_detect_linter_after_npx_strip() {
-        // Simulates: rtk lint npx eslint src/ → after strip_pm_prefix, args = ["eslint", "src/"]
+        // Simulates: contextzip lint npx eslint src/ → after strip_pm_prefix, args = ["eslint", "src/"]
         let full_args: Vec<String> = vec!["npx".into(), "eslint".into(), "src/".into()];
         let skip = strip_pm_prefix(&full_args);
         let effective = &full_args[skip..];

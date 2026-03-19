@@ -357,7 +357,7 @@ pub(crate) fn compact_diff(diff: &str, max_lines: usize) -> String {
     }
 
     if was_truncated {
-        result.push("[full diff: rtk git diff --no-compact]".to_string());
+        result.push("[full diff: contextzip git diff --no-compact]".to_string());
     }
 
     result.join("\n")
@@ -2267,8 +2267,8 @@ no changes added to commit (use "git add" and/or "git commit -a")
     #[test]
     #[ignore] // Requires `cargo build` first — run with `cargo test --ignored`
     fn test_git_status_not_a_repo_exits_nonzero() {
-        // Run rtk git status in a directory that is not a git repo
-        let tmp = std::env::temp_dir().join("rtk_test_not_a_repo");
+        // Run contextzip git status in a directory that is not a git repo
+        let tmp = std::env::temp_dir().join("cz_test_not_a_repo");
         let _ = std::fs::create_dir_all(&tmp);
 
         // Build the path to the test binary
@@ -2285,7 +2285,7 @@ no changes added to commit (use "git add" and/or "git commit -a")
             .args(["git", "status"])
             .current_dir(&tmp)
             .output()
-            .expect("Failed to run rtk");
+            .expect("Failed to run contextzip");
 
         // Should exit with non-zero (128 from git)
         assert!(

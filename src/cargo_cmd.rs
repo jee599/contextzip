@@ -888,7 +888,7 @@ fn filter_cargo_clippy(output: &str) -> String {
         if (line.starts_with("warning:") || line.starts_with("warning["))
             || (line.starts_with("error:") || line.starts_with("error["))
         {
-            // Skip summary lines: "warning: `rtk` (bin) generated 5 warnings"
+            // Skip summary lines: "warning: `contextzip` (bin) generated 5 warnings"
             if line.contains("generated") && line.contains("warning") {
                 continue;
             }
@@ -989,7 +989,7 @@ mod tests {
 
     #[test]
     fn test_restore_double_dash_with_separator() {
-        // rtk cargo test -- --nocapture → clap gives ["--nocapture"]
+        // contextzip cargo test -- --nocapture → clap gives ["--nocapture"]
         let args: Vec<String> = vec!["--nocapture".into()];
         let raw = vec![
             "contextzip".into(),
@@ -1004,7 +1004,7 @@ mod tests {
 
     #[test]
     fn test_restore_double_dash_with_test_name() {
-        // rtk cargo test my_test -- --nocapture → clap gives ["my_test", "--nocapture"]
+        // contextzip cargo test my_test -- --nocapture → clap gives ["my_test", "--nocapture"]
         let args: Vec<String> = vec!["my_test".into(), "--nocapture".into()];
         let raw = vec![
             "contextzip".into(),
@@ -1020,7 +1020,7 @@ mod tests {
 
     #[test]
     fn test_restore_double_dash_without_separator() {
-        // rtk cargo test my_test → no --, args unchanged
+        // contextzip cargo test my_test → no --, args unchanged
         let args: Vec<String> = vec!["my_test".into()];
         let raw = vec![
             "contextzip".into(),
@@ -1042,7 +1042,7 @@ mod tests {
 
     #[test]
     fn test_restore_double_dash_clippy() {
-        // rtk cargo clippy -- -D warnings → clap gives ["-D", "warnings"]
+        // contextzip cargo clippy -- -D warnings → clap gives ["-D", "warnings"]
         let args: Vec<String> = vec!["-D".into(), "warnings".into()];
         let raw = vec![
             "contextzip".into(),
@@ -1058,7 +1058,7 @@ mod tests {
 
     #[test]
     fn test_restore_double_dash_clippy_with_package_flags() {
-        // rtk cargo clippy -p my-service -p my-crate -- -D warnings
+        // contextzip cargo clippy -p my-service -p my-crate -- -D warnings
         // Clap with trailing_var_arg preserves "--" when args precede it
         // → clap gives ["-p", "my-service", "-p", "my-crate", "--", "-D", "warnings"]
         let args: Vec<String> = vec![

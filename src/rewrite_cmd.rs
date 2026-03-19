@@ -2,13 +2,13 @@ use crate::discover::registry;
 
 /// Run the `contextzip rewrite` command.
 ///
-/// Prints the RTK-rewritten command to stdout and exits 0.
-/// Exits 1 (without output) if the command has no RTK equivalent.
+/// Prints the ContextZip-rewritten command to stdout and exits 0.
+/// Exits 1 (without output) if the command has no ContextZip equivalent.
 ///
 /// Used by shell hooks to rewrite commands transparently:
 /// ```bash
-/// REWRITTEN=$(rtk rewrite "$CMD") || exit 0
-/// [ "$CMD" = "$REWRITTEN" ] && exit 0  # already RTK, skip
+/// REWRITTEN=$(contextzip rewrite "$CMD") || exit 0
+/// [ "$CMD" = "$REWRITTEN" ] && exit 0  # already rewritten, skip
 /// ```
 pub fn run(cmd: &str) -> anyhow::Result<()> {
     let excluded = crate::config::Config::load()

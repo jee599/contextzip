@@ -74,8 +74,8 @@ fn run_gt_filtered(
     } else {
         format!("gt {} {}", subcmd_str, args.join(" "))
     };
-    let rtk_label = format!("contextzip {}", label);
-    timer.track(&label, &rtk_label, &raw, &output);
+    let cz_label = format!("contextzip {}", label);
+    timer.track(&label, &cz_label, &raw, &output);
 
     if !cmd_output.status.success() {
         std::process::exit(exit_code);

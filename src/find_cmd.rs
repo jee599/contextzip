@@ -23,7 +23,7 @@ fn glob_match_inner(pat: &[u8], name: &[u8]) -> bool {
     }
 }
 
-/// Parsed arguments from either native find or RTK find syntax.
+/// Parsed arguments from either native find or ContextZip find syntax.
 #[derive(Debug)]
 struct FindArgs {
     pattern: String,
@@ -60,7 +60,7 @@ fn has_native_find_flags(args: &[String]) -> bool {
         .any(|a| a == "-name" || a == "-type" || a == "-maxdepth" || a == "-iname")
 }
 
-/// Native find flags that RTK cannot handle correctly.
+/// Native find flags that ContextZip cannot handle correctly.
 /// These involve compound predicates, actions, or semantics we don't support.
 const UNSUPPORTED_FIND_FLAGS: &[&str] = &[
     "-not", "!", "-or", "-o", "-and", "-a", "-exec", "-execdir", "-delete", "-print0", "-newer",
@@ -73,10 +73,10 @@ fn has_unsupported_find_flags(args: &[String]) -> bool {
         .any(|a| UNSUPPORTED_FIND_FLAGS.contains(&a.as_str()))
 }
 
-/// Parse arguments from raw args vec, supporting both native find and RTK syntax.
+/// Parse arguments from raw args vec, supporting both native find and ContextZip syntax.
 ///
 /// Native find syntax: `find . -name "*.rs" -type f -maxdepth 3`
-/// RTK syntax: `find *.rs [path] [-m max] [-t type]`
+/// ContextZip syntax: `find *.rs [path] [-m max] [-t type]`
 fn parse_find_args(args: &[String]) -> Result<FindArgs> {
     if args.is_empty() {
         return Ok(FindArgs::default());
@@ -91,7 +91,7 @@ fn parse_find_args(args: &[String]) -> Result<FindArgs> {
     if has_native_find_flags(args) {
         parse_native_find_args(args)
     } else {
-        parse_rtk_find_args(args)
+        parse_contextzip_find_args(args)
     }
 }
 
@@ -140,8 +140,8 @@ fn parse_native_find_args(args: &[String]) -> Result<FindArgs> {
     Ok(parsed)
 }
 
-/// Parse RTK syntax: `find <pattern> [path] [-m max] [-t type]`
-fn parse_rtk_find_args(args: &[String]) -> Result<FindArgs> {
+/// Parse ContextZip syntax: `find <pattern> [path] [-m max] [-t type]`
+fn parse_contextzip_find_args(args: &[String]) -> Result<FindArgs> {
     let mut parsed = FindArgs {
         pattern: args[0].clone(),
         ..FindArgs::default()
@@ -367,12 +367,12 @@ pub fn run(
         println!("{}", ext_line);
     }
 
-    let rtk_output = format!("{}F {}D + {}", total_files, dirs_count, ext_line);
+    let compressed = format!("{}F {}D + {}", total_files, dirs_count, ext_line);
     timer.track(
         &format!("find {} -name '{}'", path, effective_pattern),
         "contextzip find",
         &raw_output,
-        &rtk_output,
+        &compressed,
     );
 
     Ok(())
@@ -503,24 +503,24 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // --- parse_find_args: RTK syntax ---
+    // --- parse_find_args: ContextZip syntax ---
 
     #[test]
-    fn parse_rtk_syntax_pattern_only() {
+    fn parse_contextzip_syntax_pattern_only() {
         let parsed = parse_find_args(&args(&["*.rs"])).unwrap();
         assert_eq!(parsed.pattern, "*.rs");
         assert_eq!(parsed.path, ".");
     }
 
     #[test]
-    fn parse_rtk_syntax_pattern_and_path() {
+    fn parse_contextzip_syntax_pattern_and_path() {
         let parsed = parse_find_args(&args(&["*.rs", "src"])).unwrap();
         assert_eq!(parsed.pattern, "*.rs");
         assert_eq!(parsed.path, "src");
     }
 
     #[test]
-    fn parse_rtk_syntax_with_flags() {
+    fn parse_contextzip_syntax_with_flags() {
         let parsed = parse_find_args(&args(&["*.rs", "src", "-m", "10", "-t", "d"])).unwrap();
         assert_eq!(parsed.pattern, "*.rs");
         assert_eq!(parsed.path, "src");
@@ -545,8 +545,8 @@ mod tests {
     }
 
     #[test]
-    fn run_from_args_rtk_syntax() {
-        // Simulates: rtk find *.rs src
+    fn run_from_args_contextzip_syntax() {
+        // Simulates: contextzip find *.rs src
         let result = run_from_args(&args(&["*.rs", "src"]), 0);
         assert!(result.is_ok());
     }
