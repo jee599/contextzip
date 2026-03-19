@@ -246,13 +246,19 @@ fn compress_rust(input: &str) -> String {
     let mut result = Vec::new();
     let mut hidden_count = 0;
     let mut i = 0;
+    let mut skip_next_at = false;
+
+    fn is_rust_framework_line(line: &str) -> bool {
+        RUST_FRAMEWORK_RE.is_match(line)
+            || RUST_RUSTC_PATH_RE.is_match(line)
+            || line.contains(".cargo/registry/")
+    }
 
     while i < lines.len() {
         let line = lines[i];
 
         // Match numbered backtrace frame line (e.g. "   3: myapp::handler::process")
         if RUST_BACKTRACE_FRAME_RE.is_match(line) {
-            // Extract function name from this line
             let func_name = RUST_FRAME_EXTRACT_RE
                 .captures(line)
                 .and_then(|c| c.get(1))
@@ -266,19 +272,21 @@ fn compress_rust(input: &str) -> String {
                 None
             };
 
-            // Determine if this is a framework frame
-            let is_framework = RUST_FRAMEWORK_RE.is_match(line)
-                || at_line.is_some_and(|l| RUST_RUSTC_PATH_RE.is_match(l))
-                || at_line.is_some_and(|l| RUST_FRAMEWORK_RE.is_match(l));
+            // Framework if function name or at-path matches
+            let is_framework = is_rust_framework_line(line)
+                || at_line.is_some_and(|l| is_rust_framework_line(l));
 
             if is_framework {
                 hidden_count += 1;
-                // Skip the "at" continuation line too
                 if at_line.is_some() {
-                    i += 1;
+                    skip_next_at = true;
                 }
             } else {
-                // User code frame -- format nicely
+                // Flush hidden count before user frame
+                if hidden_count > 0 {
+                    result.push(format!("  (+ {} framework frames hidden)", hidden_count));
+                    hidden_count = 0;
+                }
                 let location = at_line.and_then(|l| {
                     RUST_LOCATION_RE.captures(l).map(|c| {
                         let file = c.get(1).map(|m| m.as_str()).unwrap_or("?");
@@ -288,30 +296,29 @@ fn compress_rust(input: &str) -> String {
                 });
 
                 if let Some(loc) = location {
-                    result.push(format!("  \u{2192} {:<16} {}()", loc, func_name));
+                    result.push(format!("  \u{2192} {}  {}()", loc, func_name));
+                    skip_next_at = true;
                 } else {
                     result.push(format!("  \u{2192} {}", func_name));
                 }
-
-                // Skip the "at" continuation line
-                if at_line.is_some() {
-                    i += 1;
-                }
             }
         } else if RUST_BACKTRACE_AT_RE.is_match(line) {
-            // Orphan "at" line (shouldn't happen normally, but handle gracefully)
-            // If it's a rustc internal path, hide it
-            if RUST_RUSTC_PATH_RE.is_match(line) {
+            if skip_next_at {
+                skip_next_at = false;
+            } else if is_rust_framework_line(line) {
                 hidden_count += 1;
             } else {
                 result.push(line.to_string());
             }
+        } else if line.trim() == "stack backtrace:" {
+            // Keep but don't flush hidden count (backtrace hasn't started)
+            result.push(line.to_string());
         } else {
-            // Non-frame line (panic message, "stack backtrace:", etc.)
             if hidden_count > 0 {
                 result.push(format!("  (+ {} framework frames hidden)", hidden_count));
                 hidden_count = 0;
             }
+            skip_next_at = false;
             result.push(line.to_string());
         }
 
@@ -322,7 +329,12 @@ fn compress_rust(input: &str) -> String {
         result.push(format!("  (+ {} framework frames hidden)", hidden_count));
     }
 
-    result.join("\n")
+    let compressed = result.join("\n");
+    // Guard: if compression made it larger, return original
+    if compressed.len() >= input.len() {
+        return input.to_string();
+    }
+    compressed
 }
 
 fn compress_go(input: &str) -> String {
