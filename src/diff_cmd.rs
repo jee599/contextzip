@@ -41,8 +41,12 @@ pub fn run(file1: &Path, file2: &Path, verbose: u8) -> Result<()> {
 
     for change in diff.changes.iter().take(50) {
         match change {
-            DiffChange::Added(ln, c) => compressed.push_str(&format!("+{:4} {}\n", ln, truncate(c, 80))),
-            DiffChange::Removed(ln, c) => compressed.push_str(&format!("-{:4} {}\n", ln, truncate(c, 80))),
+            DiffChange::Added(ln, c) => {
+                compressed.push_str(&format!("+{:4} {}\n", ln, truncate(c, 80)))
+            }
+            DiffChange::Removed(ln, c) => {
+                compressed.push_str(&format!("-{:4} {}\n", ln, truncate(c, 80)))
+            }
             DiffChange::Modified(ln, old, new) => compressed.push_str(&format!(
                 "~{:4} {} → {}\n",
                 ln,
@@ -77,7 +81,12 @@ pub fn run_stdin(_verbose: u8) -> Result<()> {
     let condensed = condense_unified_diff(&input);
     println!("{}", condensed);
 
-    timer.track("diff (stdin)", "contextzip diff (stdin)", &input, &condensed);
+    timer.track(
+        "diff (stdin)",
+        "contextzip diff (stdin)",
+        &input,
+        &condensed,
+    );
 
     Ok(())
 }

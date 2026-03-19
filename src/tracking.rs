@@ -349,11 +349,12 @@ impl Tracker {
         );
 
         // Migration: rename legacy rtk_cmd column (from upstream RTK) → contextzip_cmd
-        let has_legacy_col: bool = conn
-            .prepare("SELECT rtk_cmd FROM commands LIMIT 0")
-            .is_ok();
+        let has_legacy_col: bool = conn.prepare("SELECT rtk_cmd FROM commands LIMIT 0").is_ok();
         if has_legacy_col {
-            let _ = conn.execute("ALTER TABLE commands RENAME COLUMN rtk_cmd TO contextzip_cmd", []);
+            let _ = conn.execute(
+                "ALTER TABLE commands RENAME COLUMN rtk_cmd TO contextzip_cmd",
+                [],
+            );
         }
 
         conn.execute(
@@ -1660,7 +1661,13 @@ mod tests {
     #[test]
     fn test_timed_execution_track_with_feature() {
         let timer = TimedExecution::start();
-        timer.track_with_feature("cmd", "contextzip cmd", "long input data", "short", "docker");
+        timer.track_with_feature(
+            "cmd",
+            "contextzip cmd",
+            "long input data",
+            "short",
+            "docker",
+        );
 
         let tracker = Tracker::new().expect("Failed to create tracker");
         let features = tracker

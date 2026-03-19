@@ -273,8 +273,8 @@ fn compress_rust(input: &str) -> String {
             };
 
             // Framework if function name or at-path matches
-            let is_framework = is_rust_framework_line(line)
-                || at_line.is_some_and(is_rust_framework_line);
+            let is_framework =
+                is_rust_framework_line(line) || at_line.is_some_and(is_rust_framework_line);
 
             if is_framework {
                 hidden_count += 1;

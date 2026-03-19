@@ -9,8 +9,7 @@ lazy_static! {
     static ref CARGO_DEP_RE: Regex =
         Regex::new(r#"^([a-zA-Z0-9_-]+)\s*=\s*(?:"([^"]+)"|.*version\s*=\s*"([^"]+)")"#).unwrap();
     static ref CARGO_SECTION_RE: Regex = Regex::new(r"^\[([^\]]+)\]").unwrap();
-    static ref REQUIREMENTS_DEP_RE: Regex =
-        Regex::new(r"^([a-zA-Z0-9_-]+)([=<>!~]+.*)?$").unwrap();
+    static ref REQUIREMENTS_DEP_RE: Regex = Regex::new(r"^([a-zA-Z0-9_-]+)([=<>!~]+.*)?$").unwrap();
 }
 
 /// Summarize project dependencies

@@ -205,8 +205,12 @@ impl TomlFilterRegistry {
                     eprintln!("[contextzip] Filters NOT applied. Run `contextzip trust` to review and enable.");
                 }
                 crate::trust::TrustStatus::ContentChanged { .. } => {
-                    eprintln!("[contextzip] WARNING: .contextzip/filters.toml changed since trusted.");
-                    eprintln!("[contextzip] Filters NOT applied. Run `contextzip trust` to re-review.");
+                    eprintln!(
+                        "[contextzip] WARNING: .contextzip/filters.toml changed since trusted."
+                    );
+                    eprintln!(
+                        "[contextzip] Filters NOT applied. Run `contextzip trust` to re-review."
+                    );
                 }
             }
         }
@@ -247,7 +251,10 @@ impl TomlFilterRegistry {
         for (name, def) in file.filters {
             match compile_filter(name.clone(), def) {
                 Ok(f) => compiled.push(f),
-                Err(e) => eprintln!("[contextzip] warning: filter '{}' in {}: {}", name, source, e),
+                Err(e) => eprintln!(
+                    "[contextzip] warning: filter '{}' in {}: {}",
+                    name, source, e
+                ),
             }
         }
         Ok(compiled)
@@ -529,7 +536,7 @@ pub fn apply_filter(filter: &CompiledFilter, stdout: &str) -> String {
 }
 
 // ---------------------------------------------------------------------------
-// rtk verify — inline test execution
+// contextzip verify — inline test execution
 // ---------------------------------------------------------------------------
 
 /// Run inline tests from loaded TOML files (builtin + project-local).
@@ -599,7 +606,10 @@ fn collect_test_outcomes(
     let file: TomlFilterFile = match toml::from_str(content) {
         Ok(f) => f,
         Err(e) => {
-            eprintln!("[contextzip] warning: TOML parse error during verify: {}", e);
+            eprintln!(
+                "[contextzip] warning: TOML parse error during verify: {}",
+                e
+            );
             return;
         }
     };

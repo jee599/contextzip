@@ -106,7 +106,11 @@ where
 
     timer.track(
         &format!("cargo {} {}", subcommand, restored_args.join(" ")),
-        &format!("contextzip cargo {} {}", subcommand, restored_args.join(" ")),
+        &format!(
+            "contextzip cargo {} {}",
+            subcommand,
+            restored_args.join(" ")
+        ),
         &raw,
         &filtered,
     );

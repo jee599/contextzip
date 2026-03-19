@@ -756,7 +756,12 @@ fn run_default_mode(
     let hook_changed = ensure_hook_installed(&hook_path, verbose)?;
 
     // 2. Write CONTEXTZIP.md
-    write_if_changed(&contextzip_md_path, CONTEXTZIP_SLIM, "CONTEXTZIP.md", verbose)?;
+    write_if_changed(
+        &contextzip_md_path,
+        CONTEXTZIP_SLIM,
+        "CONTEXTZIP.md",
+        verbose,
+    )?;
 
     let opencode_plugin_path = if install_opencode {
         let path = prepare_opencode_plugin_path()?;
@@ -1012,7 +1017,10 @@ fn run_claude_md_mode(global: bool, verbose: u8, install_opencode: bool) -> Resu
         }
     } else {
         fs::write(&path, CONTEXTZIP_INSTRUCTIONS)?;
-        println!("[ok] Created {} with contextzip instructions", path.display());
+        println!(
+            "[ok] Created {} with contextzip instructions",
+            path.display()
+        );
     }
 
     if global {
@@ -2159,7 +2167,8 @@ More notes
         // show_config prints to stdout; verify the constants used don't say "RTK hook"
         // in user-facing contexts (comments in code are ok, but printed strings should say ContextZip)
         // This is a lightweight check on the key format strings
-        let show_usage_lines = ["contextzip init -g --uninstall     # Remove all ContextZip artifacts"];
+        let show_usage_lines =
+            ["contextzip init -g --uninstall     # Remove all ContextZip artifacts"];
         for line in show_usage_lines {
             assert!(
                 !line.contains("RTK artifacts"),

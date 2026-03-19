@@ -1956,7 +1956,8 @@ fn main() -> Result<()> {
                             .arg("prisma")
                             .status()
                             .context("Failed to run npx prisma")?;
-                        timer.track_passthrough("npx prisma", "contextzip npx prisma (passthrough)");
+                        timer
+                            .track_passthrough("npx prisma", "contextzip npx prisma (passthrough)");
                         if !status.success() {
                             std::process::exit(status.code().unwrap_or(1));
                         }
@@ -2310,8 +2311,8 @@ mod tests {
 
     #[test]
     fn test_git_commit_amend() {
-        let cli =
-            Cli::try_parse_from(["contextzip", "git", "commit", "--amend", "-m", "new msg"]).unwrap();
+        let cli = Cli::try_parse_from(["contextzip", "git", "commit", "--amend", "-m", "new msg"])
+            .unwrap();
         match cli.command {
             Commands::Git {
                 command: GitCommands::Commit { args },

@@ -248,9 +248,9 @@ mod tests {
     fn test_count_mixed_explicit_and_hook() {
         let cmds = vec![
             make_cmd("contextzip git status", Some(200)), // explicit contextzip
-            make_cmd("git log -5", Some(1000)),         // hook-rewritten (logged as raw)
+            make_cmd("git log -5", Some(1000)),           // hook-rewritten (logged as raw)
             make_cmd("contextzip cargo test", Some(5000)), // explicit contextzip
-            make_cmd("echo hello", None),               // not supported
+            make_cmd("echo hello", None),                 // not supported
         ];
         let (total, covered, output) = count_covered_commands(&cmds);
         assert_eq!(total, 4);

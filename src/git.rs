@@ -784,7 +784,12 @@ fn run_status(args: &[String], verbose: u8, global_args: &[String]) -> Result<()
     println!("{}", formatted);
 
     // Track for statistics
-    timer.track("git status", "contextzip git status", &raw_output, &formatted);
+    timer.track(
+        "git status",
+        "contextzip git status",
+        &raw_output,
+        &formatted,
+    );
 
     Ok(())
 }
@@ -906,7 +911,12 @@ fn run_commit(args: &[String], verbose: u8, global_args: &[String]) -> Result<()
 
         println!("{}", compact);
 
-        timer.track(&original_cmd, "contextzip git commit", &raw_output, &compact);
+        timer.track(
+            &original_cmd,
+            "contextzip git commit",
+            &raw_output,
+            &compact,
+        );
     } else {
         if stderr.contains("nothing to commit") || stdout.contains("nothing to commit") {
             println!("ok (nothing to commit)");
@@ -1373,7 +1383,12 @@ fn run_stash(
 
             let filtered = filter_stash_list(&stdout);
             println!("{}", filtered);
-            timer.track("git stash list", "contextzip git stash list", &raw, &filtered);
+            timer.track(
+                "git stash list",
+                "contextzip git stash list",
+                &raw,
+                &filtered,
+            );
         }
         Some("show") => {
             let mut cmd = git_cmd(global_args);
@@ -1395,7 +1410,12 @@ fn run_stash(
                 compacted
             };
 
-            timer.track("git stash show", "contextzip git stash show", &raw, &filtered);
+            timer.track(
+                "git stash show",
+                "contextzip git stash show",
+                &raw,
+                &filtered,
+            );
         }
         Some("pop") | Some("apply") | Some("drop") | Some("push") => {
             let sub = subcommand.unwrap();

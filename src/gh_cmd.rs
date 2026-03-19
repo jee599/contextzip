@@ -625,7 +625,12 @@ fn list_issues(args: &[String], _verbose: u8, ultra_compact: bool) -> Result<()>
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        timer.track("gh issue list", "contextzip gh issue list", &stderr, &stderr);
+        timer.track(
+            "gh issue list",
+            "contextzip gh issue list",
+            &stderr,
+            &stderr,
+        );
         eprintln!("{}", stderr.trim());
         std::process::exit(output.status.code().unwrap_or(1));
     }
@@ -1055,7 +1060,12 @@ fn pr_create(args: &[String], _verbose: u8) -> Result<()> {
     let filtered = ok_confirmation("created", &detail);
     println!("{}", filtered);
 
-    timer.track("gh pr create", "contextzip gh pr create", &stdout, &filtered);
+    timer.track(
+        "gh pr create",
+        "contextzip gh pr create",
+        &stdout,
+        &filtered,
+    );
     Ok(())
 }
 
@@ -1259,7 +1269,10 @@ fn run_passthrough(cmd: &str, subcommand: &str, args: &[String]) -> Result<()> {
     let args_str = tracking::args_display(&args.iter().map(|s| s.into()).collect::<Vec<_>>());
     timer.track_passthrough(
         &format!("{} {} {}", cmd, subcommand, args_str),
-        &format!("contextzip {} {} {} (passthrough)", cmd, subcommand, args_str),
+        &format!(
+            "contextzip {} {} {} (passthrough)",
+            cmd, subcommand, args_str
+        ),
     );
 
     if !status.success() {

@@ -39,12 +39,22 @@ pub fn run(url: &str, args: &[String], verbose: u8) -> Result<()> {
             format_size(size)
         );
         println!("{}", msg);
-        timer.track(&format!("wget {}", url), "contextzip wget", &raw_output, &msg);
+        timer.track(
+            &format!("wget {}", url),
+            "contextzip wget",
+            &raw_output,
+            &msg,
+        );
     } else {
         let error = parse_error(&stderr, &stdout);
         let msg = format!("{} FAILED: {}", compact_url(url), error);
         println!("{}", msg);
-        timer.track(&format!("wget {}", url), "contextzip wget", &raw_output, &msg);
+        timer.track(
+            &format!("wget {}", url),
+            "contextzip wget",
+            &raw_output,
+            &msg,
+        );
         std::process::exit(output.status.code().unwrap_or(1));
     }
 

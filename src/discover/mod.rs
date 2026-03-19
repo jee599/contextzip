@@ -111,16 +111,17 @@ pub fn run(
                         estimated_savings_pct,
                         status,
                     } => {
-                        let bucket = supported_map.entry(cz_equivalent).or_insert_with(|| {
-                            SupportedBucket {
-                                cz_equivalent,
-                                category,
-                                count: 0,
-                                total_output_tokens: 0,
-                                savings_pct: estimated_savings_pct,
-                                command_counts: HashMap::new(),
-                            }
-                        });
+                        let bucket =
+                            supported_map
+                                .entry(cz_equivalent)
+                                .or_insert_with(|| SupportedBucket {
+                                    cz_equivalent,
+                                    category,
+                                    count: 0,
+                                    total_output_tokens: 0,
+                                    savings_pct: estimated_savings_pct,
+                                    command_counts: HashMap::new(),
+                                });
 
                         bucket.count += 1;
 

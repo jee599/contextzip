@@ -1226,7 +1226,10 @@ mod tests {
 
     #[test]
     fn test_rewrite_rtk_disabled_git_status() {
-        assert_eq!(rewrite_command("CONTEXTZIP_DISABLED=1 git status", &[]), None);
+        assert_eq!(
+            rewrite_command("CONTEXTZIP_DISABLED=1 git status", &[]),
+            None
+        );
     }
 
     #[test]

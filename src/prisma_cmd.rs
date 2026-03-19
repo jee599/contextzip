@@ -139,7 +139,12 @@ fn run_migrate(subcommand: MigrateSubcommand, args: &[String], verbose: u8) -> R
     };
 
     println!("{}", filtered);
-    timer.track(cmd_name, &format!("contextzip {}", cmd_name), &raw, &filtered);
+    timer.track(
+        cmd_name,
+        &format!("contextzip {}", cmd_name),
+        &raw,
+        &filtered,
+    );
 
     Ok(())
 }
@@ -178,7 +183,12 @@ fn run_db_push(args: &[String], verbose: u8) -> Result<()> {
 
     let filtered = filter_db_push(&raw);
     println!("{}", filtered);
-    timer.track("prisma db push", "contextzip prisma db push", &raw, &filtered);
+    timer.track(
+        "prisma db push",
+        "contextzip prisma db push",
+        &raw,
+        &filtered,
+    );
 
     Ok(())
 }

@@ -121,7 +121,12 @@ fn docker_images(_verbose: u8) -> Result<()> {
     if lines.is_empty() {
         compressed.push_str("[docker] 0 images");
         println!("{}", compressed);
-        timer.track("docker images", "contextzip docker images", &raw, &compressed);
+        timer.track(
+            "docker images",
+            "contextzip docker images",
+            &raw,
+            &compressed,
+        );
         return Ok(());
     }
 
@@ -170,7 +175,12 @@ fn docker_images(_verbose: u8) -> Result<()> {
     }
 
     print!("{}", compressed);
-    timer.track("docker images", "contextzip docker images", &raw, &compressed);
+    timer.track(
+        "docker images",
+        "contextzip docker images",
+        &raw,
+        &compressed,
+    );
     Ok(())
 }
 
@@ -244,7 +254,12 @@ fn kubectl_pods(args: &[String], _verbose: u8) -> Result<()> {
         Err(_) => {
             compressed.push_str("No pods found");
             println!("{}", compressed);
-            timer.track("kubectl get pods", "contextzip kubectl pods", &raw, &compressed);
+            timer.track(
+                "kubectl get pods",
+                "contextzip kubectl pods",
+                &raw,
+                &compressed,
+            );
             return Ok(());
         }
     };
@@ -252,7 +267,12 @@ fn kubectl_pods(args: &[String], _verbose: u8) -> Result<()> {
     let Some(pods) = json["items"].as_array().filter(|a| !a.is_empty()) else {
         compressed.push_str("No pods found");
         println!("{}", compressed);
-        timer.track("kubectl get pods", "contextzip kubectl pods", &raw, &compressed);
+        timer.track(
+            "kubectl get pods",
+            "contextzip kubectl pods",
+            &raw,
+            &compressed,
+        );
         return Ok(());
     };
     let (mut running, mut pending, mut failed, mut restarts_total) = (0, 0, 0, 0i64);
@@ -320,7 +340,12 @@ fn kubectl_pods(args: &[String], _verbose: u8) -> Result<()> {
     }
 
     print!("{}", compressed);
-    timer.track("kubectl get pods", "contextzip kubectl pods", &raw, &compressed);
+    timer.track(
+        "kubectl get pods",
+        "contextzip kubectl pods",
+        &raw,
+        &compressed,
+    );
     Ok(())
 }
 
@@ -351,7 +376,12 @@ fn kubectl_services(args: &[String], _verbose: u8) -> Result<()> {
         Err(_) => {
             compressed.push_str("No services found");
             println!("{}", compressed);
-            timer.track("kubectl get svc", "contextzip kubectl svc", &raw, &compressed);
+            timer.track(
+                "kubectl get svc",
+                "contextzip kubectl svc",
+                &raw,
+                &compressed,
+            );
             return Ok(());
         }
     };
@@ -359,7 +389,12 @@ fn kubectl_services(args: &[String], _verbose: u8) -> Result<()> {
     let Some(services) = json["items"].as_array().filter(|a| !a.is_empty()) else {
         compressed.push_str("No services found");
         println!("{}", compressed);
-        timer.track("kubectl get svc", "contextzip kubectl svc", &raw, &compressed);
+        timer.track(
+            "kubectl get svc",
+            "contextzip kubectl svc",
+            &raw,
+            &compressed,
+        );
         return Ok(());
     };
     compressed.push_str(&format!("{} services:\n", services.len()));
@@ -400,7 +435,12 @@ fn kubectl_services(args: &[String], _verbose: u8) -> Result<()> {
     }
 
     print!("{}", compressed);
-    timer.track("kubectl get svc", "contextzip kubectl svc", &raw, &compressed);
+    timer.track(
+        "kubectl get svc",
+        "contextzip kubectl svc",
+        &raw,
+        &compressed,
+    );
     Ok(())
 }
 

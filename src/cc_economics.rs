@@ -269,7 +269,10 @@ fn merge_weekly(cc: Option<Vec<CcusagePeriod>>, cz_stats: Vec<WeekStats>) -> Vec
     result
 }
 
-fn merge_monthly(cc: Option<Vec<CcusagePeriod>>, cz_stats: Vec<MonthStats>) -> Vec<PeriodEconomics> {
+fn merge_monthly(
+    cc: Option<Vec<CcusagePeriod>>,
+    cz_stats: Vec<MonthStats>,
+) -> Vec<PeriodEconomics> {
     let mut map: HashMap<String, PeriodEconomics> = HashMap::new();
 
     // Insert ccusage data
@@ -791,10 +794,7 @@ fn print_csv_row(p: &PeriodEconomics) {
         .map(|t| t.to_string())
         .unwrap_or_default();
     let total_tokens = p.cc_total_tokens.map(|t| t.to_string()).unwrap_or_default();
-    let saved_tokens = p
-        .cz_saved_tokens
-        .map(|t| t.to_string())
-        .unwrap_or_default();
+    let saved_tokens = p.cz_saved_tokens.map(|t| t.to_string()).unwrap_or_default();
     let weighted_savings = p
         .savings_weighted
         .map(|s| format!("{:.4}", s))

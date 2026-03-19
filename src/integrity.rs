@@ -181,7 +181,11 @@ fn read_stored_hash(path: &Path) -> Result<String> {
 /// Resolve the default hook path (~/.claude/hooks/contextzip-rewrite.sh)
 pub fn resolve_hook_path() -> Result<PathBuf> {
     dirs::home_dir()
-        .map(|h| h.join(".claude").join("hooks").join("contextzip-rewrite.sh"))
+        .map(|h| {
+            h.join(".claude")
+                .join("hooks")
+                .join("contextzip-rewrite.sh")
+        })
         .context("Cannot determine home directory. Is $HOME set?")
 }
 
