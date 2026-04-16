@@ -27,6 +27,60 @@ use regex::{Regex, RegexSet};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
+lazy_static! {
+    /// Matches `$VAR` or `${VAR}` where VAR is uppercase ASCII + digits + `_`.
+    /// Used by `expand_env_vars` to substitute environment variables in TOML
+    /// pattern fields before regex compilation. Lowercase / mixed-case names
+    /// are intentionally not matched — env vars in regex patterns are almost
+    /// always uppercase, and excluding mixed case avoids accidental capture
+    /// of regex backreferences like `$1`.
+    static ref ENV_VAR_RE: Regex =
+        Regex::new(r"\$\{([A-Z_][A-Z0-9_]*)\}|\$([A-Z_][A-Z0-9_]*)").unwrap();
+}
+
+/// Substitute `$VAR` / `${VAR}` references in `s` with the corresponding env
+/// values. Undefined variables become the empty string (silent).
+fn expand_env_vars(s: &str) -> String {
+    expand_env_vars_with(s, |k| std::env::var(k).ok())
+}
+
+/// Test seam for `expand_env_vars` — accepts an arbitrary lookup so unit tests
+/// can avoid mutating the process environment.
+fn expand_env_vars_with(s: &str, lookup: impl Fn(&str) -> Option<String>) -> String {
+    ENV_VAR_RE
+        .replace_all(s, |caps: &regex::Captures| {
+            let name = caps.get(1).or_else(|| caps.get(2)).map(|m| m.as_str());
+            name.and_then(&lookup).unwrap_or_default()
+        })
+        .into_owned()
+}
+
+/// Returns true if `platform_filter` (from TOML) is compatible with the
+/// current OS. None means "any platform".
+fn platform_matches(platform_filter: Option<&str>) -> bool {
+    let Some(p) = platform_filter else {
+        return true;
+    };
+    let current = current_os();
+    match p {
+        "any" | "" => true,
+        "unix" => current == "macos" || current == "linux",
+        other => other == current,
+    }
+}
+
+fn current_os() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "macos"
+    } else if cfg!(target_os = "linux") {
+        "linux"
+    } else if cfg!(target_os = "windows") {
+        "windows"
+    } else {
+        "other"
+    }
+}
+
 // Built-in filters: concatenated from src/filters/*.toml by build.rs at compile time.
 const BUILTIN_TOML: &str = include_str!(concat!(env!("OUT_DIR"), "/builtin_filters.toml"));
 
@@ -101,6 +155,12 @@ struct TomlFilterDef {
     tail_lines: Option<usize>,
     max_lines: Option<usize>,
     on_empty: Option<String>,
+    /// Restrict this filter to a specific OS. Accepts: `macos`, `linux`,
+    /// `windows`, `unix` (= macos | linux), `any` / unset = all platforms.
+    /// Filters that don't match the current OS are silently skipped at load
+    /// time. Unknown values are treated as never-match.
+    #[serde(default)]
+    platform: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -249,6 +309,12 @@ impl TomlFilterRegistry {
 
         let mut compiled = Vec::new();
         for (name, def) in file.filters {
+            // Skip filters tagged for a different OS — silently. Filter authors
+            // can write `platform = "linux"` next to a Linux-specific filter
+            // and ContextZip just ignores it on macOS / Windows.
+            if !platform_matches(def.platform.as_deref()) {
+                continue;
+            }
             match compile_filter(name.clone(), def) {
                 Ok(f) => compiled.push(f),
                 Err(e) => eprintln!(
@@ -322,7 +388,11 @@ fn compile_filter(name: String, def: TomlFilterDef) -> Result<CompiledFilter, St
         return Err("strip_lines_matching and keep_lines_matching are mutually exclusive".into());
     }
 
-    let match_regex = Regex::new(&def.match_command)
+    // Pre-expand env-var references in every pattern field so filter authors can
+    // write `$HOME`, `$CI_COMMIT_SHA`, etc. once instead of hardcoding paths or
+    // splitting filters per environment.
+    let expanded_match_command = expand_env_vars(&def.match_command);
+    let match_regex = Regex::new(&expanded_match_command)
         .map_err(|e| format!("invalid match_command regex: {}", e))?;
 
     // Shadow warning: if match_command matches a Rust-handled command, this filter
@@ -342,13 +412,13 @@ fn compile_filter(name: String, def: TomlFilterDef) -> Result<CompiledFilter, St
         .replace
         .into_iter()
         .map(|r| {
-            let pat = r.pattern.clone();
-            Regex::new(&r.pattern)
+            let expanded = expand_env_vars(&r.pattern);
+            Regex::new(&expanded)
                 .map(|pattern| CompiledReplaceRule {
                     pattern,
-                    replacement: r.replacement,
+                    replacement: expand_env_vars(&r.replacement),
                 })
-                .map_err(|e| format!("invalid replace pattern '{}': {}", pat, e))
+                .map_err(|e| format!("invalid replace pattern '{}': {}", r.pattern, e))
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -356,14 +426,15 @@ fn compile_filter(name: String, def: TomlFilterDef) -> Result<CompiledFilter, St
         .match_output
         .into_iter()
         .map(|r| -> Result<CompiledMatchOutputRule, String> {
-            let pat = r.pattern.clone();
-            let pattern = Regex::new(&r.pattern)
-                .map_err(|e| format!("invalid match_output pattern '{}': {}", pat, e))?;
+            let expanded = expand_env_vars(&r.pattern);
+            let pattern = Regex::new(&expanded)
+                .map_err(|e| format!("invalid match_output pattern '{}': {}", r.pattern, e))?;
             let unless = r
                 .unless
                 .as_deref()
                 .map(|u| {
-                    Regex::new(u)
+                    let expanded_u = expand_env_vars(u);
+                    Regex::new(&expanded_u)
                         .map_err(|e| format!("invalid match_output unless pattern '{}': {}", u, e))
                 })
                 .transpose()?;
@@ -375,12 +446,23 @@ fn compile_filter(name: String, def: TomlFilterDef) -> Result<CompiledFilter, St
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let line_filter = if !def.strip_lines_matching.is_empty() {
-        let set = RegexSet::new(&def.strip_lines_matching)
+    let strip_expanded: Vec<String> = def
+        .strip_lines_matching
+        .iter()
+        .map(|s| expand_env_vars(s))
+        .collect();
+    let keep_expanded: Vec<String> = def
+        .keep_lines_matching
+        .iter()
+        .map(|s| expand_env_vars(s))
+        .collect();
+
+    let line_filter = if !strip_expanded.is_empty() {
+        let set = RegexSet::new(&strip_expanded)
             .map_err(|e| format!("invalid strip_lines_matching regex: {}", e))?;
         LineFilter::Strip(set)
-    } else if !def.keep_lines_matching.is_empty() {
-        let set = RegexSet::new(&def.keep_lines_matching)
+    } else if !keep_expanded.is_empty() {
+        let set = RegexSet::new(&keep_expanded)
             .map_err(|e| format!("invalid keep_lines_matching regex: {}", e))?;
         LineFilter::Keep(set)
     } else {
@@ -1705,5 +1787,131 @@ expected = "output line 1\noutput line 2"
             "Newly added filter must be discoverable via find_filter_in"
         );
         assert_eq!(found.unwrap().name, "my-new-tool");
+    }
+
+    // --- Track 5: env var substitution + per-platform filters ---
+
+    #[test]
+    fn expand_env_substitutes_known_var() {
+        let lookup = |k: &str| -> Option<String> {
+            match k {
+                "MY_HOME" => Some("/home/jidong".into()),
+                _ => None,
+            }
+        };
+        assert_eq!(expand_env_vars_with("path: $MY_HOME/bin", lookup), "path: /home/jidong/bin");
+    }
+
+    #[test]
+    fn expand_env_supports_braced_form() {
+        let lookup = |k: &str| -> Option<String> {
+            if k == "X" {
+                Some("Y".into())
+            } else {
+                None
+            }
+        };
+        assert_eq!(expand_env_vars_with("a${X}b", lookup), "aYb");
+    }
+
+    #[test]
+    fn expand_env_silent_on_undefined() {
+        let lookup = |_: &str| -> Option<String> { None };
+        assert_eq!(expand_env_vars_with("$NOPE/path", lookup), "/path");
+    }
+
+    #[test]
+    fn expand_env_does_not_eat_regex_backrefs() {
+        // Regex backrefs use lowercase digits like $1, $2 — these MUST NOT be
+        // captured as env vars or `replace.replacement` strings break.
+        let lookup = |_: &str| Some("WRONG".into());
+        assert_eq!(expand_env_vars_with("$1 (group)", lookup), "$1 (group)");
+        assert_eq!(expand_env_vars_with("$mixedCase", lookup), "$mixedCase");
+    }
+
+    #[test]
+    fn platform_filter_loads_when_matching_current_os() {
+        let toml = format!(
+            r#"
+schema_version = 1
+[filters.platform-test]
+match_command = "^xxx"
+platform = "{}"
+on_empty = "ok"
+"#,
+            current_os()
+        );
+        let filters = make_filters(&toml);
+        assert_eq!(filters.len(), 1, "filter for current OS should load");
+    }
+
+    #[test]
+    fn platform_filter_skipped_when_os_mismatches() {
+        let other = if current_os() == "linux" {
+            "windows"
+        } else {
+            "linux"
+        };
+        let toml = format!(
+            r#"
+schema_version = 1
+[filters.platform-test]
+match_command = "^xxx"
+platform = "{}"
+"#,
+            other
+        );
+        let filters = make_filters(&toml);
+        assert!(filters.is_empty(), "filter for {} should not load on {}", other, current_os());
+    }
+
+    #[test]
+    fn platform_filter_unix_loads_on_macos_or_linux() {
+        let toml = r#"
+schema_version = 1
+[filters.unix-test]
+match_command = "^xxx"
+platform = "unix"
+on_empty = "ok"
+"#;
+        let filters = make_filters(toml);
+        if current_os() == "macos" || current_os() == "linux" {
+            assert_eq!(filters.len(), 1);
+        } else {
+            assert!(filters.is_empty());
+        }
+    }
+
+    #[test]
+    fn platform_filter_unset_loads_everywhere() {
+        let toml = r#"
+schema_version = 1
+[filters.no-platform]
+match_command = "^xxx"
+on_empty = "ok"
+"#;
+        let filters = make_filters(toml);
+        assert_eq!(filters.len(), 1, "platform-less filter must always load");
+    }
+
+    #[test]
+    fn env_var_substitution_propagates_into_match_command() {
+        // SAFETY: we set a unique env var to avoid clobbering anything real.
+        // SAFETY: std::env::set_var is safe in single-threaded test execution
+        std::env::set_var("CTXZIP_TEST_TOOL", "mytool");
+        let toml = r#"
+schema_version = 1
+[filters.envtest]
+match_command = "^$CTXZIP_TEST_TOOL\\b"
+on_empty = "envtest: ok"
+"#;
+        let filters = make_filters(toml);
+        // Verify the regex actually matches the substituted command name.
+        let result = find_filter_in("mytool --version", &filters);
+        assert!(
+            result.is_some(),
+            "env-substituted match_command must match real input"
+        );
+        std::env::remove_var("CTXZIP_TEST_TOOL");
     }
 }
