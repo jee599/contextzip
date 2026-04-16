@@ -6,6 +6,7 @@
 
 <h3 align="center">
   CLI output eats your AI context window. ContextZip compresses it 40-97% (61% avg across 102 tests).<br>
+  <b>v0.2 in progress</b>: session-history compression — the first compressor that touches past tool history, not just live stdout.<br>
   <code>npx contextzip</code>
 </h3>
 
@@ -270,19 +271,34 @@ Built on [RTK](https://github.com/rtk-ai/rtk) (28k⭐). All 34 RTK commands incl
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ What's Next (v0.2)
 
-ContextZip today compresses **live stdout**. We measured 6,850 assistant messages across 10 real Claude Code sessions: **85.8% of context comes from tool history** (inputs + results). Live stdout is a slice of that.
+ContextZip today compresses **live stdout**. We measured 6,850 assistant messages across 10 real Claude Code sessions and found:
 
-Five tracks in flight — full design [here](docs/superpowers/specs/2026-04-17-contextzip-advancement-design.md):
+| Layer | Share of context |
+|---|---|
+| Tool inputs (Edit/Write/Bash/Read/Agent args) | **46.4%** |
+| Tool results (Read/Bash/Agent outputs) | **39.4%** |
+| User text | 10.1% |
+| Assistant text | 4.1% |
 
-1. **Upstream catch-up** — rtk v0.31~0.36 fixes (git/aws/clippy/runner)
-2. **Stability** — fill test gaps in `env_cmd` / `verify_cmd` / `wget_cmd`
-3. **New filters** — `uv` (Python), `gradle`/`mvn` (JVM), `mise`, `helm`, `terraform`, `biome`
-4. **Session-history compressor** — `contextzip compact <session>` rewrites past tool history into a reversible sidecar (8-10% extra token savings, fully rollback-safe)
-5. **DSL polish** — env var substitution + per-platform filters
+**85.8% of context = tool history.** ContextZip currently only touches the *live Bash stdout* slice. v0.2 introduces the first compressor that operates on **past** tool history, not just real-time output.
 
-See [`ROADMAP.md`](ROADMAP.md) for the short version.
+```bash
+contextzip compact <session-id>   # writes a reversible sidecar
+contextzip apply   <session-id>   # atomic swap with .bak backup
+contextzip expand  <session-id>   # rollback
+```
+
+v0.2 ships **two safe axes only** — `BashHistoryCompact` (re-apply filters to past Bash results, idempotent) and `ReadDedup` (dedup repeated file reads with hash validation, expand on mismatch). Honest target: **8-10% additional token reduction** on real resumed sessions, original JSONL never modified.
+
+**Other v0.2 tracks** (full design [here](docs/superpowers/specs/2026-04-17-contextzip-advancement-design.md)):
+- Upstream catch-up — rtk v0.31~0.36 fixes (git/aws/clippy/runner)
+- New filters — `uv` (Python), `gradle`/`mvn` (JVM), `mise`, `helm`, `terraform`, `biome`
+- Stability — test coverage for `env_cmd` / `verify_cmd` / `wget_cmd`
+- DSL polish — env var substitution + per-platform filters
+
+Short version in [`ROADMAP.md`](ROADMAP.md).
 
 ---
 
