@@ -3,7 +3,7 @@ use crate::tracking;
 use crate::utils::resolved_command;
 use anyhow::{Context, Result};
 use std::ffi::OsString;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 #[derive(Debug, Clone)]
 pub enum GitCommand {
@@ -884,7 +884,11 @@ fn run_commit(args: &[String], verbose: u8, global_args: &[String]) -> Result<()
         eprintln!("{}", original_cmd);
     }
 
+    // Inherit stdin so SSH passphrase / GPG signing prompts can read from the
+    // user's terminal. Without this, signed commits silently hang or fail.
+    // stdout / stderr are still captured for the compact summary.
     let output = build_commit_command(args, global_args)
+        .stdin(Stdio::inherit())
         .output()
         .context("Failed to run git commit")?;
 
@@ -959,7 +963,11 @@ fn run_push(args: &[String], verbose: u8, global_args: &[String]) -> Result<()> 
         cmd.arg(arg);
     }
 
-    let output = cmd.output().context("Failed to run git push")?;
+    // Inherit stdin so credential helpers / SSH key passphrase prompts work.
+    let output = cmd
+        .stdin(Stdio::inherit())
+        .output()
+        .context("Failed to run git push")?;
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1021,7 +1029,11 @@ fn run_pull(args: &[String], verbose: u8, global_args: &[String]) -> Result<()> 
         cmd.arg(arg);
     }
 
-    let output = cmd.output().context("Failed to run git pull")?;
+    // Inherit stdin so credential helpers / SSH key passphrase prompts work.
+    let output = cmd
+        .stdin(Stdio::inherit())
+        .output()
+        .context("Failed to run git pull")?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -1322,7 +1334,11 @@ fn run_fetch(args: &[String], verbose: u8, global_args: &[String]) -> Result<()>
         cmd.arg(arg);
     }
 
-    let output = cmd.output().context("Failed to run git fetch")?;
+    // Inherit stdin so credential helpers / SSH key passphrase prompts work.
+    let output = cmd
+        .stdin(Stdio::inherit())
+        .output()
+        .context("Failed to run git fetch")?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     let raw = format!("{}{}", stdout, stderr);

@@ -4,6 +4,16 @@ Active design: [`docs/superpowers/specs/2026-04-17-contextzip-advancement-design
 
 Empirical baseline: 6,850 assistant messages across 10 large Claude Code sessions, **85.8% of context = tool inputs + tool results**. ContextZip currently touches only the Bash slice. Five tracks address the gap.
 
+## Status (2026-04-17 ship)
+
+| Track | Status | Notes |
+|---|---|---|
+| 1. Upstream catch-up | 🟡 partial | git `-u` collision, find dotfiles, curl localhost passthrough, git commit/push/pull/fetch stdin inherit shipped. AWS expansion + `--copilot` + read defaults + runner SIGINT + security salt deferred. |
+| 2. Stability | ✅ shipped | env_cmd / verify_cmd / wget_cmd test backfill + summary lazy_static refactor. |
+| 3. New filters | ✅ shipped | All 6 filters (biome / uv / mise / helm / terraform / gradle / mvn) already existed as TOML rules under `src/filters/`. 137 inline tests pass. |
+| 4. Context-history | ✅ shipped | `contextzip compact / apply / expand`. ReadDedup + BashHistoryCompact. Measured 6.7% on 55 MB session. |
+| 5. DSL polish | ✅ shipped | Env-var substitution + per-platform filters. |
+
 ## Track 1 — Upstream Catch-Up (rtk 0.30.1 → 0.36.0)
 
 Manual logic patches (hash-level cherry-pick infeasible due to RTK→ContextZip rename).
