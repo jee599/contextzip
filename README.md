@@ -265,6 +265,24 @@ Built on [RTK](https://github.com/rtk-ai/rtk) (28k⭐). All 34 RTK commands incl
 | Package install noise (npm/pip/cargo) | ❌ | ✅ |
 | Docker build compression | 🟡 | ✅ |
 | Per-command savings display | ❌ | ✅ |
+| Session-history compression (planned) | ❌ | 🚧 |
+| 2026 toolchain coverage (uv/helm/biome/tf, planned) | ❌ | 🚧 |
+
+---
+
+## 🗺️ Roadmap
+
+ContextZip today compresses **live stdout**. We measured 6,850 assistant messages across 10 real Claude Code sessions: **85.8% of context comes from tool history** (inputs + results). Live stdout is a slice of that.
+
+Five tracks in flight — full design [here](docs/superpowers/specs/2026-04-17-contextzip-advancement-design.md):
+
+1. **Upstream catch-up** — rtk v0.31~0.36 fixes (git/aws/clippy/runner)
+2. **Stability** — fill test gaps in `env_cmd` / `verify_cmd` / `wget_cmd`
+3. **New filters** — `uv` (Python), `gradle`/`mvn` (JVM), `mise`, `helm`, `terraform`, `biome`
+4. **Session-history compressor** — `contextzip compact <session>` rewrites past tool history into a reversible sidecar (8-10% extra token savings, fully rollback-safe)
+5. **DSL polish** — env var substitution + per-platform filters
+
+See [`ROADMAP.md`](ROADMAP.md) for the short version.
 
 ---
 
@@ -355,6 +373,8 @@ git clone https://github.com/jee599/contextzip.git && cd contextzip
 cargo test         # 1,056 tests
 cargo clippy       # lint
 ```
+
+Working on a track from the [roadmap](ROADMAP.md)? Open an issue first so we can confirm scope and avoid double work.
 
 ## 📡 Telemetry
 
