@@ -202,3 +202,94 @@ fn is_interesting_var(key: &str) -> bool {
     let patterns = ["HOME", "USER", "LANG", "LC_", "TZ", "PWD", "OLDPWD"];
     patterns.iter().any(|p| key.to_uppercase().starts_with(p))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mask_value_short_strings_become_stars() {
+        assert_eq!(mask_value(""), "****");
+        assert_eq!(mask_value("ab"), "****");
+        assert_eq!(mask_value("abcd"), "****");
+    }
+
+    #[test]
+    fn mask_value_keeps_first_two_and_last_two_chars() {
+        assert_eq!(mask_value("abcde"), "ab****de");
+        assert_eq!(mask_value("abcdefgh"), "ab****gh");
+        assert_eq!(mask_value("sk-1234567890abcdef"), "sk****ef");
+    }
+
+    #[test]
+    fn mask_value_handles_unicode_safely() {
+        // Must not panic on multi-byte chars (security: token strings may be base64+padding)
+        let masked = mask_value("한국어테스트");
+        assert!(masked.contains("****"));
+    }
+
+    #[test]
+    fn sensitive_patterns_cover_credentials() {
+        let patterns = get_sensitive_patterns();
+        for required in [
+            "key",
+            "secret",
+            "password",
+            "token",
+            "credential",
+            "auth",
+            "private",
+            "api_key",
+            "apikey",
+            "access_key",
+            "jwt",
+        ] {
+            assert!(
+                patterns.contains(required),
+                "missing sensitive pattern: {}",
+                required
+            );
+        }
+    }
+
+    #[test]
+    fn is_lang_var_matches_runtime_keys() {
+        assert!(is_lang_var("RUSTFLAGS"));
+        assert!(is_lang_var("CARGO_HOME"));
+        assert!(is_lang_var("PYTHONPATH"));
+        assert!(is_lang_var("NODE_OPTIONS"));
+        assert!(is_lang_var("npm_config_prefix"));
+        assert!(!is_lang_var("HOME"));
+        assert!(!is_lang_var("PATH"));
+    }
+
+    #[test]
+    fn is_cloud_var_matches_cloud_keys() {
+        assert!(is_cloud_var("AWS_REGION"));
+        assert!(is_cloud_var("AZURE_CLIENT_ID"));
+        assert!(is_cloud_var("DOCKER_HOST"));
+        assert!(is_cloud_var("KUBERNETES_SERVICE_HOST"));
+        assert!(!is_cloud_var("HOME"));
+        assert!(!is_cloud_var("RUSTFLAGS"));
+    }
+
+    #[test]
+    fn is_tool_var_matches_tool_keys() {
+        assert!(is_tool_var("EDITOR"));
+        assert!(is_tool_var("GIT_AUTHOR_NAME"));
+        assert!(is_tool_var("SSH_AGENT_PID"));
+        assert!(is_tool_var("CLAUDE_API_KEY"));
+        assert!(!is_tool_var("PATH"));
+    }
+
+    #[test]
+    fn is_interesting_var_requires_prefix_match_not_substring() {
+        assert!(is_interesting_var("HOME"));
+        assert!(is_interesting_var("USER"));
+        assert!(is_interesting_var("LANG"));
+        assert!(is_interesting_var("LC_ALL"));
+        assert!(is_interesting_var("TZ"));
+        // Substring inside the value is NOT a prefix — should not match
+        assert!(!is_interesting_var("RUST_HOMER"));
+    }
+}

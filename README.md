@@ -13,7 +13,7 @@
 <p align="center">
   <a href="https://github.com/jee599/contextzip/releases"><img src="https://img.shields.io/github/v/release/jee599/contextzip?style=flat-square&color=blue" alt="Release" /></a>
   <a href="https://github.com/jee599/contextzip/actions"><img src="https://img.shields.io/github/actions/workflow/status/jee599/contextzip/ci.yml?style=flat-square" alt="CI" /></a>
-  <img src="https://img.shields.io/badge/tests-1%2C056_passing-brightgreen?style=flat-square" alt="Tests" />
+  <img src="https://img.shields.io/badge/tests-1%2C083_passing-brightgreen?style=flat-square" alt="Tests" />
   <img src="https://img.shields.io/badge/benchmarks-102_cases-orange?style=flat-square" alt="Benchmarks" />
   <a href="LICENSE"><img src="https://img.shields.io/github/license/jee599/contextzip?style=flat-square" alt="License" /></a>
 </p>
@@ -386,7 +386,7 @@ build          112       0.4M     81%
 
 ```bash
 git clone https://github.com/jee599/contextzip.git && cd contextzip
-cargo test         # 1,056 tests
+cargo test         # 1,083 tests
 cargo clippy       # lint
 ```
 

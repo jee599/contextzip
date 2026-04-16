@@ -45,3 +45,31 @@ pub fn run(filter: Option<String>, require_all: bool) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn run_with_filter_targeting_no_filters_succeeds() {
+        // A filter name guaranteed not to exist returns Ok with zero tests.
+        let r = run(Some("__no_such_filter_zzz__".to_string()), false);
+        assert!(r.is_ok(), "expected Ok for missing filter, got: {:?}", r);
+    }
+
+    #[test]
+    fn run_with_filter_and_require_all_does_not_panic_on_unknown_filter() {
+        // require_all only flags filters with no inline tests; an unknown filter
+        // simply has no matches at all and should pass through cleanly.
+        let r = run(Some("__no_such_filter_zzz__".to_string()), true);
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn run_default_invocation_returns_ok_or_test_failure_only() {
+        // With no filter argument and no require_all, the only way run() can Err
+        // is if a built-in inline test actually fails. That's a CI signal, not a
+        // crash, so the call must not panic regardless of result.
+        let _ = run(None, false);
+    }
+}

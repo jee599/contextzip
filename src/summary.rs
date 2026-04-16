@@ -1,8 +1,22 @@
 use crate::tracking;
 use crate::utils::truncate;
 use anyhow::{Context, Result};
+use lazy_static::lazy_static;
 use regex::Regex;
+use std::collections::HashMap;
 use std::process::{Command, Stdio};
+
+lazy_static! {
+    // Pre-compiled regexes for the four numeric-summary keywords used by
+    // summarize_tests(). Keys must match the strings passed to extract_number().
+    static ref EXTRACT_NUMBER_RE: HashMap<&'static str, Regex> = {
+        let mut m = HashMap::new();
+        for kw in ["passed", "failed", "skipped", "ignored"] {
+            m.insert(kw, Regex::new(&format!(r"(\d+)\s*{}", kw)).unwrap());
+        }
+        m
+    };
+}
 
 /// Run a command and provide a heuristic summary
 pub fn run(command: &str, verbose: u8) -> Result<()> {
@@ -291,8 +305,70 @@ fn summarize_generic(output: &str, result: &mut Vec<String>) {
 }
 
 fn extract_number(text: &str, after: &str) -> Option<usize> {
-    let re = Regex::new(&format!(r"(\d+)\s*{}", after)).ok()?;
-    re.captures(text)
+    EXTRACT_NUMBER_RE
+        .get(after)?
+        .captures(text)
         .and_then(|c| c.get(1))
         .and_then(|m| m.as_str().parse().ok())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_number_finds_value_before_keyword() {
+        assert_eq!(extract_number("5 passed", "passed"), Some(5));
+        assert_eq!(extract_number("100 passed", "passed"), Some(100));
+        assert_eq!(extract_number("3 failed", "failed"), Some(3));
+        assert_eq!(extract_number("12 skipped", "skipped"), Some(12));
+        assert_eq!(extract_number("7 ignored", "ignored"), Some(7));
+    }
+
+    #[test]
+    fn extract_number_handles_whitespace_between_number_and_keyword() {
+        assert_eq!(extract_number("5  passed", "passed"), Some(5));
+        assert_eq!(extract_number("5\tpassed", "passed"), Some(5));
+    }
+
+    #[test]
+    fn extract_number_picks_correct_keyword_in_mixed_line() {
+        let mixed = "5 passed 3 failed";
+        assert_eq!(extract_number(mixed, "passed"), Some(5));
+        assert_eq!(extract_number(mixed, "failed"), Some(3));
+    }
+
+    #[test]
+    fn extract_number_returns_none_when_keyword_absent() {
+        assert_eq!(extract_number("no numbers here", "passed"), None);
+        assert_eq!(extract_number("", "passed"), None);
+    }
+
+    #[test]
+    fn extract_number_returns_none_for_unknown_keyword() {
+        // Behavior contract: only the four registered keywords are supported.
+        // Unknown keywords return None instead of compiling a regex on the fly.
+        assert_eq!(extract_number("5 unknown", "unknown"), None);
+    }
+
+    #[test]
+    fn detect_output_type_recognizes_test_output() {
+        let out = "running tests\n10 passed, 0 failed";
+        assert!(matches!(
+            detect_output_type(out, "cargo test"),
+            OutputType::TestResults
+        ));
+    }
+
+    #[test]
+    fn detect_output_type_recognizes_json_output() {
+        assert!(matches!(
+            detect_output_type("{\"key\": \"value\"}", "echo something"),
+            OutputType::JsonOutput
+        ));
+        assert!(matches!(
+            detect_output_type("[1, 2, 3]", "jq"),
+            OutputType::JsonOutput
+        ));
+    }
 }

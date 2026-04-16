@@ -276,3 +276,148 @@ fn truncate_line(line: &str, max: usize) -> String {
         format!("{}...", t)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compact_url_strips_protocol() {
+        assert_eq!(compact_url("https://example.com/path"), "example.com/path");
+        assert_eq!(compact_url("http://localhost:8080"), "localhost:8080");
+    }
+
+    #[test]
+    fn compact_url_keeps_short_urls_intact() {
+        let short = "example.com/short";
+        assert_eq!(compact_url(&format!("https://{}", short)), short);
+    }
+
+    #[test]
+    fn compact_url_truncates_long_urls_with_ellipsis() {
+        let long = format!(
+            "https://{}/{}",
+            "a".repeat(40),
+            "b".repeat(40)
+        );
+        let out = compact_url(&long);
+        assert!(out.contains("..."), "expected ellipsis in {}", out);
+        assert!(out.len() < long.len());
+    }
+
+    #[test]
+    fn format_size_uses_human_readable_units() {
+        assert_eq!(format_size(0), "?");
+        assert_eq!(format_size(100), "100B");
+        assert_eq!(format_size(1024), "1.0KB");
+        assert_eq!(format_size(1536), "1.5KB");
+        assert_eq!(format_size(1024 * 1024), "1.0MB");
+        assert_eq!(format_size(1024 * 1024 * 1024), "1.0GB");
+    }
+
+    #[test]
+    fn parse_error_recognizes_http_status_codes() {
+        assert_eq!(parse_error("ERROR 404: Not Found", ""), "404 Not Found");
+        assert_eq!(parse_error("ERROR 403", ""), "403 Forbidden");
+        assert_eq!(parse_error("ERROR 401", ""), "401 Unauthorized");
+        assert_eq!(parse_error("ERROR 500", ""), "500 Server Error");
+    }
+
+    #[test]
+    fn parse_error_recognizes_network_failures() {
+        assert_eq!(
+            parse_error("Connection refused on port 80", ""),
+            "Connection refused"
+        );
+        assert_eq!(
+            parse_error("wget: unable to resolve host", ""),
+            "DNS lookup failed"
+        );
+        assert_eq!(parse_error("Connection timed out", ""), "Connection timed out");
+    }
+
+    #[test]
+    fn parse_error_recognizes_ssl_problems() {
+        assert_eq!(
+            parse_error("SSL handshake failed", ""),
+            "SSL/TLS error"
+        );
+        assert_eq!(
+            parse_error("certificate verification failed", ""),
+            "SSL/TLS error"
+        );
+    }
+
+    #[test]
+    fn parse_error_falls_back_to_first_meaningful_line() {
+        let err = parse_error("first error line\n--debug header", "");
+        assert_eq!(err, "first error line");
+    }
+
+    #[test]
+    fn parse_error_returns_unknown_for_empty_input() {
+        assert_eq!(parse_error("", ""), "Unknown error");
+        assert_eq!(parse_error("--just headers--", ""), "Unknown error");
+    }
+
+    #[test]
+    fn truncate_line_short_lines_unchanged() {
+        assert_eq!(truncate_line("short", 100), "short");
+    }
+
+    #[test]
+    fn truncate_line_long_lines_get_ellipsis() {
+        let line = "a".repeat(200);
+        let out = truncate_line(&line, 50);
+        assert!(out.ends_with("..."));
+        assert_eq!(out.chars().count(), 50);
+    }
+
+    #[test]
+    fn extract_filename_prefers_explicit_O_arg() {
+        let args = vec!["-O".to_string(), "myfile.tar.gz".to_string()];
+        assert_eq!(
+            extract_filename_from_output("", "https://example.com/x", &args),
+            "myfile.tar.gz"
+        );
+    }
+
+    #[test]
+    fn extract_filename_falls_back_to_url_basename() {
+        assert_eq!(
+            extract_filename_from_output("", "https://example.com/path/file.tar.gz", &[]),
+            "file.tar.gz"
+        );
+        assert_eq!(
+            extract_filename_from_output("", "https://example.com/path/archive.zip?token=x", &[]),
+            "archive.zip"
+        );
+    }
+
+    #[test]
+    fn extract_filename_defaults_when_no_basename() {
+        assert_eq!(
+            extract_filename_from_output("", "https://example.com/", &[]),
+            "index.html"
+        );
+        assert_eq!(
+            extract_filename_from_output("", "https://example.com/folder", &[]),
+            "index.html"
+        );
+    }
+
+    #[test]
+    fn extract_filename_parses_french_wget_output() {
+        let stderr = "Sauvegarde en : « downloaded.txt »";
+        assert_eq!(
+            extract_filename_from_output(stderr, "https://example.com/x", &[]),
+            "downloaded.txt"
+        );
+    }
+
+    #[test]
+    fn get_file_size_returns_zero_for_missing_file() {
+        // Defensive contract: don't panic on missing file, return 0
+        assert_eq!(get_file_size("/nonexistent/path/to/file.xyz"), 0);
+    }
+}
