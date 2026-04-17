@@ -28,6 +28,7 @@ mod git;
 mod go_cmd;
 mod golangci_cmd;
 mod grep_cmd;
+mod kotlin_cmd;
 mod gt_cmd;
 mod hook_audit_cmd;
 mod hook_check;
@@ -685,6 +686,12 @@ enum Commands {
         command: GoCommands,
     },
 
+    /// Gradle/Kotlin commands with compact output (error compression, stacktrace collapse)
+    Gradle {
+        #[command(subcommand)]
+        command: GradleCommands,
+    },
+
     /// Graphite (gt) stacked PR commands with compact output
     Gt {
         #[command(subcommand)]
@@ -1068,6 +1075,31 @@ enum GoCommands {
         args: Vec<String>,
     },
     /// Passthrough: runs any unsupported go subcommand directly
+    #[command(external_subcommand)]
+    Other(Vec<OsString>),
+}
+
+#[derive(Subcommand)]
+enum GradleCommands {
+    /// Build with compact output (Kotlin error compression, stacktrace collapse)
+    Build {
+        /// Additional gradle build arguments
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Test with compact output
+    Test {
+        /// Additional gradle test arguments
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Lint with compact output
+    Lint {
+        /// Additional gradle lint arguments
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Passthrough: runs any unsupported gradle subcommand directly
     #[command(external_subcommand)]
     Other(Vec<OsString>),
 }
@@ -2078,6 +2110,21 @@ fn main() -> Result<()> {
             }
         },
 
+        Commands::Gradle { command } => match command {
+            GradleCommands::Build { args } => {
+                kotlin_cmd::run_build(&args, cli.verbose)?;
+            }
+            GradleCommands::Test { args } => {
+                kotlin_cmd::run_test(&args, cli.verbose)?;
+            }
+            GradleCommands::Lint { args } => {
+                kotlin_cmd::run_lint(&args, cli.verbose)?;
+            }
+            GradleCommands::Other(args) => {
+                kotlin_cmd::run_other(&args, cli.verbose)?;
+            }
+        },
+
         Commands::Gt { command } => match command {
             GtCommands::Log { args } => {
                 gt_cmd::run_log(&args, cli.verbose)?;
@@ -2313,6 +2360,7 @@ fn is_operational_command(cmd: &Commands) -> bool {
             | Commands::Pip { .. }
             | Commands::Go { .. }
             | Commands::GolangciLint { .. }
+            | Commands::Gradle { .. }
             | Commands::Gt { .. }
     )
 }

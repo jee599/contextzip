@@ -65,7 +65,7 @@ impl Language {
             "go" => Language::Go,
             "c" | "h" => Language::C,
             "cpp" | "cc" | "cxx" | "hpp" | "hh" => Language::Cpp,
-            "java" => Language::Java,
+            "java" | "kt" | "kts" => Language::Java,
             "rb" => Language::Ruby,
             "sh" | "bash" | "zsh" => Language::Shell,
             "json" | "jsonc" | "json5" | "yaml" | "yml" | "toml" | "xml" | "csv" | "tsv"

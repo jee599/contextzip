@@ -1,0 +1,11 @@
+> Task :app:compileDebugKotlin
+e: file:///home/user/project/app/src/main/java/com/myapp/ui/MainActivity.kt:15:42 Unresolved reference: foo
+e: file:///home/user/project/app/src/main/java/com/myapp/data/UserRepo.kt:30:10 Type mismatch: inferred type is String but Int was expected
+e: file:///home/user/project/app/src/main/java/com/myapp/util/Extensions.kt:8:1 Expecting member declaration
+w: file:///home/user/project/app/src/main/java/com/myapp/util/Utils.kt:30:1 Parameter 'x' is never used
+w: file:///home/user/project/app/src/main/java/com/myapp/data/Cache.kt:12:5 Variable 'unused' is never used
+> Task :app:compileDebugKotlin FAILED
+> Task :app:compileDebugJavaWithJavac SKIPPED
+
+BUILD FAILED in 12s
+3 actionable tasks: 1 executed, 2 up-to-date

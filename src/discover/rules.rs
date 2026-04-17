@@ -44,6 +44,8 @@ pub const PATTERNS: &[&str] = &[
     // Go tooling
     r"^go\s+(test|build|vet)",
     r"^golangci-lint(\s|$)",
+    // Kotlin/Gradle tooling
+    r"^(gradlew?|./gradlew)\s+(build|test|lint|assemble|compile)",
     // AWS CLI
     r"^aws\s+",
     // PostgreSQL
@@ -330,6 +332,15 @@ pub const RULES: &[CzRule] = &[
         category: "Go",
         savings_pct: 85.0,
         subcmd_savings: &[],
+        subcmd_status: &[],
+    },
+    // Kotlin/Gradle tooling
+    CzRule {
+        cz_cmd: "contextzip gradle",
+        rewrite_prefixes: &["./gradlew", "gradlew", "gradle"],
+        category: "Build",
+        savings_pct: 80.0,
+        subcmd_savings: &[("build", 80.0), ("test", 85.0), ("lint", 75.0)],
         subcmd_status: &[],
     },
     // AWS CLI
