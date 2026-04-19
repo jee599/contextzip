@@ -1,6 +1,6 @@
 //! Error stacktrace compression module.
 //!
-//! Detects stacktraces from 5 languages (Node.js, Python, Rust, Go, Java)
+//! Detects stacktraces from 6 languages (Node.js, Python, Rust, Go, Java, Swift)
 //! and compresses them by removing framework frames, keeping only user code.
 //! Used as a post-processor after command-specific modules run.
 
@@ -41,6 +41,14 @@ lazy_static! {
     // Extract function name and location from various frame formats
     static ref NODE_EXTRACT_RE: Regex = Regex::new(r"^\s+at\s+(?:(.+?)\s+\()?(.+):(\d+):\d+\)?").unwrap();
     static ref JAVA_EXTRACT_RE: Regex = Regex::new(r"^\s+at\s+([\w.$]+)\(([\w.]+):(\d+)\)").unwrap();
+
+    // Swift crash report detection
+    static ref SWIFT_CRASH_FRAME_RE: Regex = Regex::new(
+        r"^\d+\s+\S+\s+0x[0-9a-fA-F]+\s+.+"
+    ).unwrap();
+    static ref SWIFT_CRASH_HEADER_RE: Regex = Regex::new(
+        r"^Thread \d+( Crashed)?:"
+    ).unwrap();
 }
 
 #[derive(Debug, PartialEq)]
@@ -50,6 +58,7 @@ enum Language {
     Rust,
     Go,
     Java,
+    Swift,
 }
 
 /// Detect the language of a stacktrace from the input text.
@@ -63,6 +72,14 @@ fn detect_language(input: &str) -> Option<Language> {
         }
         if GO_GOROUTINE_RE.is_match(line) {
             return Some(Language::Go);
+        }
+        // Swift crash reports: "Thread N Crashed:" followed by dylib frames
+        if SWIFT_CRASH_HEADER_RE.is_match(line) {
+            // Verify there are actual Swift-style crash frames nearby
+            let has_crash_frames = input.lines().any(|l| SWIFT_CRASH_FRAME_RE.is_match(l));
+            if has_crash_frames {
+                return Some(Language::Swift);
+            }
         }
     }
 
@@ -98,6 +115,7 @@ pub fn compress_errors(input: &str) -> String {
         Some(Language::Rust) => compress_rust(&deduped),
         Some(Language::Go) => compress_go(&deduped),
         Some(Language::Java) => compress_java(&deduped),
+        Some(Language::Swift) => crate::swift_cmd::compress_swift_crash(&deduped),
         None => deduped,
     }
 }

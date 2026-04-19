@@ -52,6 +52,8 @@ pub fn run_err(command: &str, verbose: u8) -> Result<()> {
         let compressed = crate::build_cmd::group_build_errors(&compressed);
         // Post-process: compress Docker build logs
         let compressed = crate::docker_cmd::compress_docker_log(&compressed);
+        // Post-process: compress Xcode build logs
+        let compressed = crate::swift_cmd::compress_xcode_log(&compressed);
         summary.push_str(&compressed);
     }
 
