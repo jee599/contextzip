@@ -355,7 +355,10 @@ fn compress_bash_text(input: &str) -> String {
     if out.len() > 200 {
         let dropped = out.len() - 200;
         out.truncate(200);
-        out.push(format!("(... {} more lines dropped by contextzip)", dropped));
+        out.push(format!(
+            "(... {} more lines dropped by contextzip)",
+            dropped
+        ));
     }
     out.join("\n")
 }
@@ -443,7 +446,11 @@ mod tests {
         let (out, stats) = compact_session_str(&input);
 
         assert_eq!(stats.read_results_deduped, 1);
-        assert!(out.contains("ReadDedup"), "missing ReadDedup marker in {}", out);
+        assert!(
+            out.contains("ReadDedup"),
+            "missing ReadDedup marker in {}",
+            out
+        );
         // First read still has the full text
         assert!(out.contains("fn main() { println!(\\\"hi\\\"); }"));
         // Second read replaced

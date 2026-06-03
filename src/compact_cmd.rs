@@ -56,8 +56,8 @@ pub fn run_all_sessions(dry_run: bool, verbose: u8) -> Result<()> {
     let mut sessions_done = 0usize;
     let mut sessions_skipped = 0usize;
 
-    for project in std::fs::read_dir(&root)
-        .with_context(|| format!("Failed to read {}", root.display()))?
+    for project in
+        std::fs::read_dir(&root).with_context(|| format!("Failed to read {}", root.display()))?
     {
         let Ok(project) = project else { continue };
         if !project.path().is_dir() {
@@ -159,12 +159,8 @@ pub fn run_apply(target: &str, verbose: u8) -> Result<()> {
         );
     }
 
-    std::fs::rename(&session_path, &backup).with_context(|| {
-        format!(
-            "Failed to back up original session to {}",
-            backup.display()
-        )
-    })?;
+    std::fs::rename(&session_path, &backup)
+        .with_context(|| format!("Failed to back up original session to {}", backup.display()))?;
     if let Err(e) = std::fs::rename(&sidecar, &session_path) {
         // Roll back the backup so we don't leave the user with no live session.
         let _ = std::fs::rename(&backup, &session_path);
@@ -216,12 +212,8 @@ pub fn run_expand(target: &str, verbose: u8) -> Result<()> {
             )
         })?;
     }
-    std::fs::rename(&backup, &session_path).with_context(|| {
-        format!(
-            "Failed to restore backup from {}",
-            backup.display()
-        )
-    })?;
+    std::fs::rename(&backup, &session_path)
+        .with_context(|| format!("Failed to restore backup from {}", backup.display()))?;
 
     println!(
         "expand: original restored at {} (compressed copy preserved at {})",
@@ -261,19 +253,22 @@ fn resolve_session_path(target: &str) -> Result<PathBuf> {
 
     let projects_root = projects_root()?;
     let mut hits: Vec<PathBuf> = Vec::new();
-    for project_dir in std::fs::read_dir(&projects_root).with_context(|| {
-        format!(
-            "Failed to read Claude Code projects directory: {}",
-            projects_root.display()
-        )
-    })? {
-        let Ok(project_dir) = project_dir else { continue };
-        if !project_dir.path().is_dir() {
-            continue;
-        }
-        let candidate = project_dir.path().join(format!("{}.jsonl", target));
-        if candidate.is_file() {
-            hits.push(candidate);
+    // A missing/unreadable projects dir simply means there are no sessions to
+    // match — fall through to the clear "No session found" error below rather
+    // than surfacing a low-level read error (this is also what CI hits, where
+    // ~/.claude/projects does not exist).
+    if let Ok(entries) = std::fs::read_dir(&projects_root) {
+        for project_dir in entries {
+            let Ok(project_dir) = project_dir else {
+                continue;
+            };
+            if !project_dir.path().is_dir() {
+                continue;
+            }
+            let candidate = project_dir.path().join(format!("{}.jsonl", target));
+            if candidate.is_file() {
+                hits.push(candidate);
+            }
         }
     }
 
@@ -333,14 +328,24 @@ mod tests {
         let session = dir.path().join("session.jsonl");
         let mut f = fs::File::create(&session)?;
         // A trivial Bash result that should pass through (too small to compress).
-        writeln!(f, r#"{{"type":"assistant","uuid":"a1","message":{{"content":[{{"type":"tool_use","id":"b1","name":"Bash","input":{{"command":"true"}}}}]}}}}"#)?;
-        writeln!(f, r#"{{"type":"user","uuid":"u1","message":{{"content":[{{"type":"tool_result","tool_use_id":"b1","content":"ok\n"}}]}}}}"#)?;
+        writeln!(
+            f,
+            r#"{{"type":"assistant","uuid":"a1","message":{{"content":[{{"type":"tool_use","id":"b1","name":"Bash","input":{{"command":"true"}}}}]}}}}"#
+        )?;
+        writeln!(
+            f,
+            r#"{{"type":"user","uuid":"u1","message":{{"content":[{{"type":"tool_result","tool_use_id":"b1","content":"ok\n"}}]}}}}"#
+        )?;
         drop(f);
 
         // Should not panic, should produce a sidecar.
         run_with_options(session.to_str().unwrap(), false, 0)?;
         let sidecar = dir.path().join("session.jsonl.compressed");
-        assert!(sidecar.exists(), "expected sidecar at {}", sidecar.display());
+        assert!(
+            sidecar.exists(),
+            "expected sidecar at {}",
+            sidecar.display()
+        );
         Ok(())
     }
 
@@ -363,10 +368,22 @@ mod tests {
         let session = dir.join("session.jsonl");
         let mut f = fs::File::create(&session)?;
         // Two reads of the same file → ReadDedup will trigger.
-        writeln!(f, r#"{{"type":"assistant","uuid":"a1","message":{{"content":[{{"type":"tool_use","id":"r1","name":"Read","input":{{"file_path":"/tmp/x.rs"}}}}]}}}}"#)?;
-        writeln!(f, r#"{{"type":"user","uuid":"u1","message":{{"content":[{{"type":"tool_result","tool_use_id":"r1","content":"fn main() {{}}"}}]}}}}"#)?;
-        writeln!(f, r#"{{"type":"assistant","uuid":"a2","message":{{"content":[{{"type":"tool_use","id":"r2","name":"Read","input":{{"file_path":"/tmp/x.rs"}}}}]}}}}"#)?;
-        writeln!(f, r#"{{"type":"user","uuid":"u2","message":{{"content":[{{"type":"tool_result","tool_use_id":"r2","content":"fn main() {{}}"}}]}}}}"#)?;
+        writeln!(
+            f,
+            r#"{{"type":"assistant","uuid":"a1","message":{{"content":[{{"type":"tool_use","id":"r1","name":"Read","input":{{"file_path":"/tmp/x.rs"}}}}]}}}}"#
+        )?;
+        writeln!(
+            f,
+            r#"{{"type":"user","uuid":"u1","message":{{"content":[{{"type":"tool_result","tool_use_id":"r1","content":"fn main() {{}}"}}]}}}}"#
+        )?;
+        writeln!(
+            f,
+            r#"{{"type":"assistant","uuid":"a2","message":{{"content":[{{"type":"tool_use","id":"r2","name":"Read","input":{{"file_path":"/tmp/x.rs"}}}}]}}}}"#
+        )?;
+        writeln!(
+            f,
+            r#"{{"type":"user","uuid":"u2","message":{{"content":[{{"type":"tool_result","tool_use_id":"r2","content":"fn main() {{}}"}}]}}}}"#
+        )?;
         Ok(session)
     }
 

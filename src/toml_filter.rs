@@ -1799,7 +1799,10 @@ expected = "output line 1\noutput line 2"
                 _ => None,
             }
         };
-        assert_eq!(expand_env_vars_with("path: $MY_HOME/bin", lookup), "path: /home/jidong/bin");
+        assert_eq!(
+            expand_env_vars_with("path: $MY_HOME/bin", lookup),
+            "path: /home/jidong/bin"
+        );
     }
 
     #[test]
@@ -1862,7 +1865,12 @@ platform = "{}"
             other
         );
         let filters = make_filters(&toml);
-        assert!(filters.is_empty(), "filter for {} should not load on {}", other, current_os());
+        assert!(
+            filters.is_empty(),
+            "filter for {} should not load on {}",
+            other,
+            current_os()
+        );
     }
 
     #[test]

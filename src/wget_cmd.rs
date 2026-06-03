@@ -295,11 +295,7 @@ mod tests {
 
     #[test]
     fn compact_url_truncates_long_urls_with_ellipsis() {
-        let long = format!(
-            "https://{}/{}",
-            "a".repeat(40),
-            "b".repeat(40)
-        );
+        let long = format!("https://{}/{}", "a".repeat(40), "b".repeat(40));
         let out = compact_url(&long);
         assert!(out.contains("..."), "expected ellipsis in {}", out);
         assert!(out.len() < long.len());
@@ -333,15 +329,15 @@ mod tests {
             parse_error("wget: unable to resolve host", ""),
             "DNS lookup failed"
         );
-        assert_eq!(parse_error("Connection timed out", ""), "Connection timed out");
+        assert_eq!(
+            parse_error("Connection timed out", ""),
+            "Connection timed out"
+        );
     }
 
     #[test]
     fn parse_error_recognizes_ssl_problems() {
-        assert_eq!(
-            parse_error("SSL handshake failed", ""),
-            "SSL/TLS error"
-        );
+        assert_eq!(parse_error("SSL handshake failed", ""), "SSL/TLS error");
         assert_eq!(
             parse_error("certificate verification failed", ""),
             "SSL/TLS error"
