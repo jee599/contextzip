@@ -232,10 +232,8 @@ fn rewrite_record(
                     }
                 }
             }
-            "Bash" => {
-                if recompress_bash_block(block) {
-                    stats.bash_results_recompressed += 1;
-                }
+            "Bash" if recompress_bash_block(block) => {
+                stats.bash_results_recompressed += 1;
             }
             _ => {}
         }

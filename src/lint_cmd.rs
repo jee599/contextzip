@@ -267,7 +267,7 @@ fn filter_eslint_json(output: &str) -> String {
         .filter(|r| !r.messages.is_empty())
         .map(|r| (r, r.messages.len()))
         .collect();
-    by_file.sort_by(|a, b| b.1.cmp(&a.1));
+    by_file.sort_by_key(|b| std::cmp::Reverse(b.1));
 
     // Build output
     let mut result = String::new();

@@ -687,10 +687,8 @@ pub fn parse_build_from_text(text: &str) -> BuildSummary {
                     summary.errors.push(issue);
                 }
             }
-            Some("warning") => {
-                if seen_warnings.insert(key) {
-                    summary.warnings.push(issue);
-                }
+            Some("warning") if seen_warnings.insert(key) => {
+                summary.warnings.push(issue);
             }
             _ => {}
         }
@@ -1015,10 +1013,8 @@ pub fn parse_restore_issues_from_text(text: &str) -> (Vec<BinlogIssue>, Vec<Binl
                     errors.push(issue);
                 }
             }
-            Some(kind) if kind == "warning" => {
-                if seen_warnings.insert(key) {
-                    warnings.push(issue);
-                }
+            Some(kind) if kind == "warning" && seen_warnings.insert(key) => {
+                warnings.push(issue);
             }
             _ => {}
         }

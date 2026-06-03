@@ -149,7 +149,7 @@ fn filter_tsc_output(output: &str) -> String {
 
     // Files sorted by error count (most errors first)
     let mut files_sorted: Vec<_> = by_file.iter().collect();
-    files_sorted.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+    files_sorted.sort_by_key(|b| std::cmp::Reverse(b.1.len()));
 
     // Show every error per file — no limits
     for (file, file_errors) in &files_sorted {

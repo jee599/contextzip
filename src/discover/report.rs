@@ -82,11 +82,9 @@ pub fn format_text(report: &DiscoverReport, limit: usize, verbose: bool) -> Stri
     out.push_str(&format!(
         "Already using ContextZip: {} commands ({}%)\n",
         report.already_contextzip,
-        if report.total_commands > 0 {
-            report.already_contextzip * 100 / report.total_commands
-        } else {
-            0
-        }
+        (report.already_contextzip * 100)
+            .checked_div(report.total_commands)
+            .unwrap_or(0)
     ));
 
     if report.supported.is_empty() && report.unsupported.is_empty() {

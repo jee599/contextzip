@@ -86,12 +86,11 @@ pub fn run(args: &[String], verbose: u8) -> Result<()> {
                 cmd.arg("--check");
             }
         }
-        "ruff" => {
+        "ruff"
             // Add "format" subcommand if not present
-            if user_args.is_empty() || !user_args[0].starts_with("format") {
+            if (user_args.is_empty() || !user_args[0].starts_with("format")) => {
                 cmd.arg("format");
             }
-        }
         _ => {}
     }
 

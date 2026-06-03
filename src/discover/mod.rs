@@ -207,7 +207,7 @@ pub fn run(
         .collect();
 
     // Sort by estimated savings descending
-    supported.sort_by(|a, b| b.estimated_savings_tokens.cmp(&a.estimated_savings_tokens));
+    supported.sort_by_key(|b| std::cmp::Reverse(b.estimated_savings_tokens));
 
     let mut unsupported: Vec<UnsupportedEntry> = unsupported_map
         .into_iter()
@@ -219,7 +219,7 @@ pub fn run(
         .collect();
 
     // Sort by count descending
-    unsupported.sort_by(|a, b| b.count.cmp(&a.count));
+    unsupported.sort_by_key(|b| std::cmp::Reverse(b.count));
 
     // Build CONTEXTZIP_DISABLED examples sorted by frequency (top 5)
     let disabled_examples: Vec<String> = {
