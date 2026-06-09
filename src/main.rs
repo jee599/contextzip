@@ -58,6 +58,7 @@ mod ruff_cmd;
 mod runner;
 mod session_cmd;
 mod summary;
+mod swift_cmd;
 mod tee;
 mod telemetry;
 mod toml_filter;
@@ -550,6 +551,12 @@ enum Commands {
         command: CargoCommands,
     },
 
+    /// Swift/Xcode commands with compact output (collapse compile lines, compress crash traces)
+    Swift {
+        #[command(subcommand)]
+        command: SwiftCommands,
+    },
+
     /// npm run with filtered output (strip boilerplate)
     Npm {
         /// npm run arguments (script name + options)
@@ -1016,6 +1023,25 @@ enum CargoCommands {
         args: Vec<String>,
     },
     /// Passthrough: runs any unsupported cargo subcommand directly
+    #[command(external_subcommand)]
+    Other(Vec<OsString>),
+}
+
+#[derive(Subcommand)]
+enum SwiftCommands {
+    /// Build with compact output (collapse CompileSwift lines, keep errors)
+    Build {
+        /// Additional swift build arguments
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Test with compact output (collapse compile noise, keep test results)
+    Test {
+        /// Additional swift test arguments
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Passthrough: runs any unsupported swift subcommand directly
     #[command(external_subcommand)]
     Other(Vec<OsString>),
 }
@@ -1901,6 +1927,18 @@ fn main() -> Result<()> {
             }
         },
 
+        Commands::Swift { command } => match command {
+            SwiftCommands::Build { args } => {
+                swift_cmd::run(swift_cmd::SwiftCommand::Build, &args, cli.verbose)?;
+            }
+            SwiftCommands::Test { args } => {
+                swift_cmd::run(swift_cmd::SwiftCommand::Test, &args, cli.verbose)?;
+            }
+            SwiftCommands::Other(args) => {
+                swift_cmd::run_passthrough(&args, cli.verbose)?;
+            }
+        },
+
         Commands::Npm { args } => {
             npm_cmd::run(&args, cli.verbose, cli.skip_env)?;
         }
@@ -2304,6 +2342,7 @@ fn is_operational_command(cmd: &Commands) -> bool {
             | Commands::Prettier { .. }
             | Commands::Playwright { .. }
             | Commands::Cargo { .. }
+            | Commands::Swift { .. }
             | Commands::Npm { .. }
             | Commands::Npx { .. }
             | Commands::Curl { .. }

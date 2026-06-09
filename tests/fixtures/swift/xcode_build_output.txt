@@ -1,0 +1,18 @@
+CompileSwift normal arm64 /Users/dev/project/Sources/App.swift
+CompileSwift normal arm64 /Users/dev/project/Sources/Models/User.swift
+CompileSwift normal arm64 /Users/dev/project/Sources/Models/Post.swift
+CompileSwift normal arm64 /Users/dev/project/Sources/Views/ContentView.swift
+CompileSwift normal arm64 /Users/dev/project/Sources/Views/DetailView.swift
+CompileSwift normal arm64 /Users/dev/project/Sources/Networking/APIClient.swift
+CompileSwift normal arm64 /Users/dev/project/Sources/Networking/Endpoint.swift
+CompileSwift normal arm64 /Users/dev/project/Sources/Extensions/String+Utils.swift
+/Users/dev/project/Sources/App.swift:42:15: error: cannot convert value of type 'String' to expected argument type 'Int'
+        let x: Int = name
+                     ^~~~
+/Users/dev/project/Sources/Models/User.swift:10:5: warning: variable 'unused' was never used; consider replacing with '_' or removing it
+        let unused = 42
+            ^~~~~~
+CompileSwift normal arm64 /Users/dev/project/Sources/Utils/Logger.swift
+CompileSwift normal arm64 /Users/dev/project/Sources/Utils/Constants.swift
+Ld /Users/dev/build/Debug/MyApp normal arm64
+** BUILD FAILED **

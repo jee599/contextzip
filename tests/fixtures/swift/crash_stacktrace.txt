@@ -1,0 +1,19 @@
+Thread 0 Crashed:
+0   libswiftCore.dylib       0x00007fff2040a123 _swift_runtime_on_report + 123
+1   libswiftCore.dylib       0x00007fff2040b456 _swift_stdlib_reportFatalError + 56
+2   libswiftCore.dylib       0x00007fff2040c789 _swift_stdlib_reportFatalErrorInFile + 89
+3   MyApp                    0x000000010a234567 MyApp.ViewController.viewDidLoad() -> () + 234
+4   UIKitCore                0x00007fff23456789 -[UIViewController _sendViewDidLoadWithAppearanceProxyObjectTaggingEnabled] + 100
+5   UIKitCore                0x00007fff23456abc -[UIViewController loadViewIfRequired] + 200
+6   UIKitCore                0x00007fff23456def -[UIViewController view] + 50
+7   UIKitCore                0x00007fff23457012 -[UIWindow addRootViewControllerViewIfPossible] + 150
+8   MyApp                    0x000000010a234999 MyApp.AppDelegate.application(_:didFinishLaunchingWithOptions:) -> Bool + 456
+9   UIKitCore                0x00007fff23457345 -[UIApplication _handleDelegateCallbacksWithOptions:isSuspended:restoreState:] + 300
+10  UIKitCore                0x00007fff23457678 -[UIApplication _callInitializationDelegatesWithActions:forCanvas:payload:fromOriginatingProcess:] + 400
+11  UIKitCore                0x00007fff234579ab -[UIApplication _runWithMainScene:transitionContext:completion:] + 500
+12  CoreFoundation           0x00007fff20123456 __CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__ + 17
+13  CoreFoundation           0x00007fff20123789 __CFRunLoopDoSources0 + 556
+14  CoreFoundation           0x00007fff20123abc __CFRunLoopRun + 842
+15  GraphicsServices         0x00007fff25678901 GSEventRunModal + 139
+16  UIKitCore                0x00007fff23458234 -[UIApplication _run] + 928
+17  UIKitCore                0x00007fff23458567 UIApplicationMain + 101
